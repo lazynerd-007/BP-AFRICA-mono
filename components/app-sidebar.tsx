@@ -204,7 +204,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           user={userData} 
           onSignOut={async () => {
             // Show logout success toast
-            await showLogoutSuccess("admin");
+            await showLogoutSuccess("administrator");
             
             // Clear user data and redirect
             setTimeout(() => {
