@@ -36,6 +36,107 @@ export class TransactionService {
   }
 
   /**
+   * Get categorized transactions (Collection - money_in)
+   * @param params - Query parameters for filtering and pagination
+   * @returns Promise with paginated collection transactions
+   */
+  async getCollectionTransactions(params?: Omit<TransactionQueryParams, 'transactionType'>): Promise<PaginatedResponse<Transaction>> {
+    try {
+      const response = await apiClient.get<PaginatedResponse<Transaction>>(
+        TRANSACTION_ENDPOINTS.TRANSACTIONS,
+        {
+          params: {
+            ...params,
+            transactionType: 'money_in',
+            paginateData: true
+          }
+        }
+      );
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch collection transactions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get categorized transactions (Reversal)
+   * @param params - Query parameters for filtering and pagination
+   * @returns Promise with paginated reversal transactions
+   */
+  async getReversalTransactions(params?: Omit<TransactionQueryParams, 'transactionType'>): Promise<PaginatedResponse<Transaction>> {
+    try {
+      const response = await apiClient.get<PaginatedResponse<Transaction>>(
+        TRANSACTION_ENDPOINTS.TRANSACTIONS,
+        {
+          params: {
+            ...params,
+            transactionType: 'reversal',
+            paginateData: true
+          }
+        }
+      );
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch reversal transactions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get categorized transactions (Payout - money_out)
+   * @param params - Query parameters for filtering and pagination
+   * @returns Promise with paginated payout transactions
+   */
+  async getPayoutTransactions(params?: Omit<TransactionQueryParams, 'transactionType'>): Promise<PaginatedResponse<Transaction>> {
+    try {
+      const response = await apiClient.get<PaginatedResponse<Transaction>>(
+        TRANSACTION_ENDPOINTS.TRANSACTIONS,
+        {
+          params: {
+            ...params,
+            transactionType: 'money_out',
+            paginateData: true
+          }
+        }
+      );
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch payout transactions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get categorized transactions by type
+   * @param transactionType - Type of transaction (money_in, reversal, money_out)
+   * @param params - Query parameters for filtering and pagination
+   * @returns Promise with paginated transactions
+   */
+  async getCategorizedTransactions(
+    transactionType: 'money_in' | 'reversal' | 'money_out',
+    params?: Omit<TransactionQueryParams, 'transactionType'>
+  ): Promise<PaginatedResponse<Transaction>> {
+    try {
+      const response = await apiClient.get<PaginatedResponse<Transaction>>(
+        TRANSACTION_ENDPOINTS.TRANSACTIONS,
+        {
+          params: {
+            ...params,
+            transactionType,
+            paginateData: true
+          }
+        }
+      );
+      
+      return response;
+    } catch (error) {
+      console.error(`Failed to fetch ${transactionType} transactions:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Get a specific transaction by ID
    * @param id - Transaction ID
    * @returns Promise with transaction data

@@ -39,6 +39,89 @@ export class MerchantService {
   }
 
   /**
+   * Get merchants by partner bank ID (for cascading filters)
+   * @param partnerBankId - Partner Bank ID
+   * @param params - Additional query parameters
+   * @returns Promise with merchants array
+   */
+  async getMerchantsByPartnerBank(
+    partnerBankId: string,
+    params?: Omit<MerchantQueryParams, 'partnerBankId'>
+  ): Promise<Merchant[]> {
+    try {
+      const response = await apiClient.get<PaginatedResponse<Merchant>>(
+        MERCHANT_ENDPOINTS.MERCHANTS,
+        {
+          params: {
+            ...params,
+            partnerBankId,
+            paginateData: false // Get all merchants for the dropdown
+          }
+        }
+      );
+      
+      // Handle different response formats
+      const responseData = response.data || (response as any).data;
+      
+      if (responseData) {
+        // Try different possible data structures
+        if ((responseData as any).data && Array.isArray((responseData as any).data)) {
+          return (responseData as any).data;
+        } else if ((responseData as any).items && Array.isArray((responseData as any).items)) {
+          return (responseData as any).items;
+        } else if (Array.isArray(responseData)) {
+          return responseData;
+        }
+      }
+      
+      return [];
+    } catch (error) {
+      console.error(`Failed to fetch merchants for partner bank ${partnerBankId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get sub-merchants by parent merchant ID (for cascading filters)
+   * @param merchantId - Parent Merchant ID
+   * @param params - Additional query parameters
+   * @returns Promise with sub-merchants array
+   */
+  async getSubMerchantsByMerchant(
+    merchantId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+    }
+  ): Promise<any[]> { // Using any[] since SubMerchant interface may not be fully defined
+    try {
+      const response = await apiClient.get<ApiResponse<any[]>>(
+        `${MERCHANT_ENDPOINTS.MERCHANT_BY_ID(merchantId)}/sub-merchants`,
+        { params }
+      );
+      
+      // Handle different response formats
+      const responseData = response.data || (response as any).data;
+      
+      if (responseData) {
+        if (Array.isArray(responseData)) {
+          return responseData;
+        } else if ((responseData as any).items && Array.isArray((responseData as any).items)) {
+          return (responseData as any).items;
+        } else if ((responseData as any).data && Array.isArray((responseData as any).data)) {
+          return (responseData as any).data;
+        }
+      }
+      
+      return [];
+    } catch (error) {
+      console.error(`Failed to fetch sub-merchants for merchant ${merchantId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Get a specific merchant by ID
    * @param id - Merchant ID
    * @returns Promise with merchant data

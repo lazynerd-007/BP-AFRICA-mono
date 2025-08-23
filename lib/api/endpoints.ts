@@ -164,6 +164,9 @@ export const REPORTS_ENDPOINTS = {
   EXPORT_MERCHANTS: '/reports/export/merchants',
   EXPORT_REVENUE: '/reports/export/revenue',
   
+  // Transaction export with filters
+  EXPORT_FILTERED_TRANSACTIONS: '/reports/transactions/export',
+  
   // Dashboard analytics
   DASHBOARD_ANALYTICS: '/reports/dashboard',
   REAL_TIME_STATS: '/reports/real-time-stats',

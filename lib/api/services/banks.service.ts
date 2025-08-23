@@ -29,7 +29,24 @@ export class BankService {
         BANK_ENDPOINTS.PARTNERS,
         { params }
       );
-      return response.data || [];
+      
+      console.log('Partner banks API response:', response);
+      
+      // Handle different response formats
+      let partnerBanks: PartnerBank[] = [];
+      
+      if (response.data) {
+        if (Array.isArray(response.data)) {
+          partnerBanks = response.data;
+        } else if ((response as any).data && Array.isArray((response as any).data)) {
+          partnerBanks = (response as any).data;
+        }
+      } else if ((response as any).data && Array.isArray((response as any).data)) {
+        partnerBanks = (response as any).data;
+      }
+      
+      console.log('Processed partner banks:', partnerBanks);
+      return partnerBanks;
     } catch (error) {
       console.warn('Failed to fetch from /banks/partners, trying fallback /partner-banks:', error);
       

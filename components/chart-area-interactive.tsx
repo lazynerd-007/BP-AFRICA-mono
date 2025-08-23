@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/toggle-group"
 import { Skeleton } from "@/components/ui/skeleton"
 import { transactionService } from "@/lib/api"
-import { TransactionAnalytics } from "@/lib/api/types"
+import { TransactionAnalytics, Transaction } from "@/lib/api/types"
 
 export const description = "An interactive area chart with live transaction data"
 
@@ -89,72 +89,100 @@ export function ChartAreaInteractive() {
     }
   }, [timeRange])
 
-  // Fetch analytics data
+  // Fetch transaction data for chart
   React.useEffect(() => {
-    const fetchAnalytics = async () => {
+    const fetchTransactionData = async () => {
       try {
         setIsLoading(true)
-        const { startDate, endDate } = getDateRange()
         
-        console.log(`📊 Fetching analytics data for chart: ${startDate} to ${endDate}`)
+        console.log(`📊 Fetching transaction data for chart using working endpoint`)
         
-        const response = await transactionService.getTransactionAnalytics({
-          startDate,
-          endDate
+        // Use the working transactions endpoint instead of analytics
+        const response = await transactionService.getTransactions({
+          page: 1,
+          perPage: 50 // Get more transactions to have better chart data
         })
         
-        console.log('📈 Chart analytics response:', response)
-        setAnalytics(response)
+        console.log('📈 Chart transaction response:', response)
         
-        // Transform analytics data to chart format
-        if (response.transactionsByDate && Array.isArray(response.transactionsByDate)) {
-          const transformedData = response.transactionsByDate.map(item => ({
-            date: item.date,
-            approved: item.count || 0, // Successful transactions count
-            failed: 0 // Failed transactions will be calculated separately if available
-          }))
+        // Transform transaction data to chart format
+        let transactions: Transaction[] = []
+        if (Array.isArray(response)) {
+          transactions = response
+        } else if (response && response.data && Array.isArray(response.data)) {
+          transactions = response.data
+        }
+        
+        if (transactions.length > 0) {
+          // Group transactions by date and status
+          const dataMap = new Map<string, { approved: number; failed: number }>()
+          const { startDate: filterStartDate, endDate: filterEndDate } = getDateRange()
+          const startFilter = new Date(filterStartDate)
+          const endFilter = new Date(filterEndDate)
           
-          console.log('📊 Transformed chart data:', transformedData)
+          transactions.forEach(transaction => {
+            const transactionDate = new Date(transaction.createdAt)
+            
+            // Filter transactions within the selected time range
+            if (transactionDate >= startFilter && transactionDate <= endFilter) {
+              const dateKey = transactionDate.toISOString().split('T')[0]
+              
+              if (!dataMap.has(dateKey)) {
+                dataMap.set(dateKey, { approved: 0, failed: 0 })
+              }
+              
+              const dayData = dataMap.get(dateKey)!
+              const status = transaction.status?.toLowerCase()
+              
+              if (status === 'completed' || status === 'success' || status === 'successful') {
+                dayData.approved++
+              } else if (status === 'failed' || status === 'error' || status === 'declined') {
+                dayData.failed++
+              } else {
+                // Treat other statuses as approved for chart purposes
+                dayData.approved++
+              }
+            }
+          })
+          
+          // Convert map to array and sort by date
+          const transformedData = Array.from(dataMap.entries())
+            .map(([date, counts]) => ({
+              date,
+              approved: counts.approved,
+              failed: counts.failed
+            }))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          
+          console.log('📊 Transformed chart data from transactions:', transformedData)
           setChartData(transformedData)
         } else {
-          // If no transactionsByDate, create data points based on the date range
+          // Create empty data for the selected time range
           const { startDate, endDate } = getDateRange()
           const start = new Date(startDate)
           const end = new Date(endDate)
           const dateArray = []
           
-          // Generate date range for the selected period
           for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
             dateArray.push({
               date: d.toISOString().split('T')[0],
-              approved: 0, // Will be populated with actual data if available
+              approved: 0,
               failed: 0
             })
           }
           
-          // If we have total counts, distribute them across the date range
-          if (dateArray.length > 0) {
-            const avgApproved = Math.floor((response.successTotalMoneyInCount || 0) / dateArray.length)
-            const avgFailed = Math.floor((response.failedTotalCount || 0) / dateArray.length)
-            
-            dateArray.forEach(item => {
-              item.approved = avgApproved
-              item.failed = avgFailed
-            })
-          }
-          
-          console.log('📊 Using generated chart data:', dateArray)
+          console.log('📊 Using empty chart data:', dateArray)
           setChartData(dateArray)
         }
       } catch (error) {
-        console.error('Failed to fetch analytics for chart:', error)
+        console.error('Failed to fetch transaction data for chart:', error)
         setChartData([]) // Empty data on error
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchAnalytics()
+    fetchTransactionData()
   }, [timeRange, getDateRange])
 
   // Since the API already filters data based on the date range we provide,

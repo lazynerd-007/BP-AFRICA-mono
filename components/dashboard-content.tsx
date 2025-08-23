@@ -150,6 +150,8 @@ function AdminDashboard() {
         const response = await transactionService.getTransactions({
           page: 1,
           perPage: 10,
+          transactionType: 'money_in',
+          paginateData: true
         });
         
         // Enhanced validation for malformed JSON responses
@@ -208,7 +210,13 @@ function AdminDashboard() {
   // Create bank options including "All" option
   const bankOptions = [
     { id: "all", name: "All Partner Banks" },
-    ...partnerBanks.map(bank => ({ id: bank.id, name: bank.name }))
+    ...partnerBanks.map(bank => {
+      // Try different possible ID fields (same fix as in useTransactionFilters)
+      const bankId = (bank as any).id || (bank as any).uuid || (bank as any)._id || (bank as any).bankId || bank.name;
+      const bankName = (bank as any).name || (bank as any).bankName || (bank as any).title || bankId;
+      
+      return { id: bankId, name: bankName };
+    })
   ];
   
   // No more static bank data - all data comes from APIs
@@ -285,53 +293,53 @@ function AdminDashboard() {
       const limitedTransactions = recentTransactions.slice(0, 10);
       
       const transformedData = limitedTransactions.map((transaction, index) => {
-      // Ensure transaction is a valid object
-      if (!transaction || typeof transaction !== 'object') {
-        console.warn(`Invalid transaction at index ${index}:`, transaction);
+        // Ensure transaction is a valid object
+        if (!transaction || typeof transaction !== 'object') {
+          console.warn(`Invalid transaction at index ${index}:`, transaction);
+          return {
+            id: index + 1,
+            merchant: `Invalid Transaction ${index + 1}`,
+            date: new Date().toISOString(),
+            tid: `INVALID-${index + 1}`,
+            scheme: 'unknown',
+            amount: 'N/A',
+            status: 'error',
+          };
+        }
+        // Debug each transaction to see what fields are available
+        console.log(`Transaction ${index}:`, transaction);
+        console.log(`Available fields:`, Object.keys(transaction));
+        
+        // Use processor field for scheme (for colorful badges)
+        const processorValue = transaction.processor || transaction.telco || transaction.type || 'Unknown';
+        let schemeName: string = String(processorValue).toLowerCase();
+        
+        // Map processor names to proper display names for color coding
+        if (schemeName.includes('mtn')) {
+          schemeName = 'mtn';
+        } else if (schemeName.includes('vodafone')) {
+          schemeName = 'vodafone';
+        } else if (schemeName.includes('airteltigo')) {
+          schemeName = 'airteltigo';
+        } else if (schemeName.includes('telecel')) {
+          schemeName = 'telecel';
+        }
+        
+        console.log(`📊 Transaction ${index}: Merchant=${transaction.merchantName || 'N/A'}, Processor=${processorValue || 'N/A'} -> Scheme=${schemeName || 'N/A'}`);
+        
         return {
           id: index + 1,
-          merchant: `Invalid Transaction ${index + 1}`,
-          date: new Date().toISOString(),
-          tid: `INVALID-${index + 1}`,
-          scheme: 'unknown',
-          amount: 'N/A',
-          status: 'error',
+          merchant: transaction.merchantName || `Merchant ${index + 1}`, // ✅ Uses merchantName from API
+          date: transaction.createdAt || new Date().toISOString(),
+          tid: transaction.transactionRef || transaction.id,
+          scheme: schemeName, // ✅ Uses processor from API (mapped for colors)
+          amount: `${transaction.currency || currency} ${typeof transaction.amount === 'number' ? transaction.amount.toLocaleString() : '0'}`,
+          status: transaction.status || 'pending',
         };
-      }
-      // Debug each transaction to see what fields are available
-      console.log(`Transaction ${index}:`, transaction);
-      console.log(`Available fields:`, Object.keys(transaction));
+      });
       
-      // Use processor field for scheme (for colorful badges)
-      const processorValue = transaction.processor || transaction.telco || transaction.type || 'Unknown';
-      let schemeName: string = String(processorValue).toLowerCase();
-      
-      // Map processor names to proper display names for color coding
-      if (schemeName.includes('mtn')) {
-        schemeName = 'mtn';
-      } else if (schemeName.includes('vodafone')) {
-        schemeName = 'vodafone';
-      } else if (schemeName.includes('airteltigo')) {
-        schemeName = 'airteltigo';
-      } else if (schemeName.includes('telecel')) {
-        schemeName = 'telecel';
-      }
-      
-      console.log(`📊 Transaction ${index}: Merchant=${transaction.merchantName || 'N/A'}, Processor=${processorValue || 'N/A'} -> Scheme=${schemeName || 'N/A'}`);
-      
-      return {
-        id: index + 1,
-        merchant: transaction.merchantName || `Merchant ${index + 1}`, // ✅ Uses merchantName from API
-        date: transaction.createdAt || new Date().toISOString(),
-        tid: transaction.transactionRef || transaction.id,
-        scheme: schemeName, // ✅ Uses processor from API (mapped for colors)
-        amount: `${transaction.currency || currency} ${typeof transaction.amount === 'number' ? transaction.amount.toLocaleString() : '0'}`,
-        status: transaction.status || 'pending',
-      };
-    });
-    
-    console.log('Transformed recent transactions data:', transformedData); // Debug log
-    return transformedData;
+      console.log('Transformed recent transactions data:', transformedData); // Debug log
+      return transformedData;
     } catch (error) {
       console.error('Error transforming recent transactions data:', error);
       return [];
@@ -387,34 +395,34 @@ function AdminDashboard() {
                 </div>
               </div>
                              <TabsContent value="recent" className="mt-4">
-                 {recentTransactionsLoading ? (
-                   <div className="space-y-3">
-                     {[...Array(5)].map((_, i) => (
-                       <div key={`recent-skeleton-${i}`} className="flex space-x-4">
-                         <Skeleton className="h-4 w-1/4" />
-                         <Skeleton className="h-4 w-1/4" />
-                         <Skeleton className="h-4 w-1/4" />
-                         <Skeleton className="h-4 w-1/4" />
-                       </div>
-                     ))}
-                   </div>
-                 ) : recentTransactionsTableData.length > 0 ? (
-                   <DataTable data={recentTransactionsTableData} currentTab="recent" />
-                 ) : (
-                   <div className="text-center py-8 text-muted-foreground">
-                     No recent transactions available
-                   </div>
-                 )}
-               </TabsContent>
+                              {recentTransactionsLoading ? (
+                                <div className="space-y-3">
+                                  {[...Array(5)].map((_, i) => (
+                                    <div key={`recent-skeleton-${i}`} className="flex space-x-4">
+                                      <Skeleton key={`recent-skeleton-${i}-1`} className="h-4 w-1/4" />
+                                      <Skeleton key={`recent-skeleton-${i}-2`} className="h-4 w-1/4" />
+                                      <Skeleton key={`recent-skeleton-${i}-3`} className="h-4 w-1/4" />
+                                      <Skeleton key={`recent-skeleton-${i}-4`} className="h-4 w-1/4" />
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : recentTransactionsTableData.length > 0 ? (
+                                <DataTable data={recentTransactionsTableData} currentTab="recent" />
+                              ) : (
+                                <div className="text-center py-8 text-muted-foreground">
+                                  No recent transactions available
+                                </div>
+                              )}
+                            </TabsContent>
               <TabsContent value="top-merchants" className="mt-4">
                 {merchantsLoading ? (
                   <div className="space-y-3">
                     {[...Array(5)].map((_, i) => (
                       <div key={`merchants-skeleton-${i}`} className="flex space-x-4">
-                        <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-4 w-1/4" />
+                        <Skeleton key={`merchants-skeleton-${i}-1`} className="h-4 w-1/4" />
+                        <Skeleton key={`merchants-skeleton-${i}-2`} className="h-4 w-1/4" />
+                        <Skeleton key={`merchants-skeleton-${i}-3`} className="h-4 w-1/4" />
+                        <Skeleton key={`merchants-skeleton-${i}-4`} className="h-4 w-1/4" />
                       </div>
                     ))}
                   </div>
@@ -431,10 +439,10 @@ function AdminDashboard() {
                   <div className="space-y-3">
                     {[...Array(5)].map((_, i) => (
                       <div key={`products-skeleton-${i}`} className="flex space-x-4">
-                        <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-4 w-1/4" />
+                        <Skeleton key={`products-skeleton-${i}-1`} className="h-4 w-1/4" />
+                        <Skeleton key={`products-skeleton-${i}-2`} className="h-4 w-1/4" />
+                        <Skeleton key={`products-skeleton-${i}-3`} className="h-4 w-1/4" />
+                        <Skeleton key={`products-skeleton-${i}-4`} className="h-4 w-1/4" />
                       </div>
                     ))}
                   </div>

@@ -29,6 +29,40 @@ export interface PaginatedResponse<T> {
   errors?: string[];
 }
 
+// Filter-specific types for cascading transaction filters
+export interface FilterOption {
+  id: string;
+  name: string;
+  value: string;
+}
+
+export interface TransactionFilterData {
+  partnerBanks: FilterOption[];
+  merchants: FilterOption[];
+  subMerchants: FilterOption[];
+  loading: {
+    partnerBanks: boolean;
+    merchants: boolean;
+    subMerchants: boolean;
+  };
+  error: {
+    partnerBanks: string | null;
+    merchants: string | null;
+    subMerchants: string | null;
+  };
+}
+
+export interface EnhancedTransactionFilters {
+  partnerBankId: string;
+  merchantId: string;
+  subMerchantId: string;
+  startDate: string;
+  endDate: string;
+  transactionType: string;
+  searchTerm: string;
+  perPage: string;
+}
+
 // Authentication Types
 export interface AuthEmailLoginDto {
   email: string;
@@ -169,6 +203,22 @@ export enum TransactionType {
   TRANSFER = 'transfer',
   WALLET_FUNDING = 'wallet_funding'
 }
+
+// Categorized transaction types for API endpoints
+export enum CategorizedTransactionType {
+  MONEY_IN = 'money_in',
+  REVERSAL = 'reversal',
+  MONEY_OUT = 'money_out'
+}
+
+// Transaction category mapping for UI
+export const TRANSACTION_CATEGORIES = {
+  collection: CategorizedTransactionType.MONEY_IN,
+  reversal: CategorizedTransactionType.REVERSAL,
+  payout: CategorizedTransactionType.MONEY_OUT
+} as const;
+
+export type TransactionCategory = keyof typeof TRANSACTION_CATEGORIES;
 
 export interface CreateCashoutDto {
   recipients: CashoutRecipient[];
@@ -555,10 +605,11 @@ export interface TransactionQueryParams {
   endDate?: string;
   partnerBankId?: string;
   merchantBank?: string;
-  transactionType?: TransactionType;
+  transactionType?: TransactionType | CategorizedTransactionType | string; // Allow custom transaction types like 'money_in'
   status?: TransactionStatus;
   telco?: TelcoProvider;
   merchantName?: string;
+  paginateData?: boolean; // Add support for paginateData parameter
 }
 
 export interface MerchantQueryParams {

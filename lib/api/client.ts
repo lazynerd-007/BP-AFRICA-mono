@@ -16,7 +16,7 @@ class ApiClient {
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        'Accept': 'application/json, text/plain, */*',
       },
     });
 
@@ -188,6 +188,7 @@ class ApiClient {
         ...config?.headers,
         'Authorization': `Secret ${secretKey}`,
         'Content-Type': 'application/json',
+        'Accept': 'application/json, text/plain, */*',
       },
     };
 
