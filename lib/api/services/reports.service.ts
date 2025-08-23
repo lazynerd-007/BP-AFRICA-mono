@@ -51,9 +51,41 @@ export class ReportsService {
    */
   async generateTransactionReport(
     filters: Partial<EnhancedTransactionFilters>
+<<<<<<< HEAD
+  ): Promise<ApiResponse<{
+    summary: {
+      totalTransactions: number;
+      totalAmount: number;
+      successfulTransactions: number;
+      failedTransactions: number;
+    };
+    data: Array<{[key: string]: unknown}>;
+    meta?: {
+      startDate: string;
+      endDate: string;
+      generatedAt: string;
+    };
+  }>> {
+    try {
+      const response = await apiClient.get<ApiResponse<{
+        summary: {
+          totalTransactions: number;
+          totalAmount: number;
+          successfulTransactions: number;
+          failedTransactions: number;
+        };
+        data: Array<{[key: string]: unknown}>;
+        meta?: {
+          startDate: string;
+          endDate: string;
+          generatedAt: string;
+        };
+      }>>(
+=======
   ): Promise<ApiResponse<any>> {
     try {
       const response = await apiClient.get<ApiResponse<any>>(
+>>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
         REPORTS_ENDPOINTS.TRANSACTION_REPORTS,
         {
           params: {

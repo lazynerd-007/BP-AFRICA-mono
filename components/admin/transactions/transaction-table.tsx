@@ -19,7 +19,10 @@ interface TransactionTableProps {
   onPerPageChange: (perPage: string) => void
   loading?: boolean
   selectedRows?: TransformedTransaction[]
+<<<<<<< HEAD
+=======
   onRowSelectionChange?: (selectedRows: TransformedTransaction[]) => void
+>>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
   currentPage?: number
   totalPages?: number
   onPageChange?: (page: number) => void
@@ -36,7 +39,10 @@ export function TransactionTable({
   onPerPageChange,
   loading = false,
   selectedRows = [],
+<<<<<<< HEAD
+=======
   onRowSelectionChange,
+>>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
   currentPage = 1,
   totalPages = 1,
   onPageChange,

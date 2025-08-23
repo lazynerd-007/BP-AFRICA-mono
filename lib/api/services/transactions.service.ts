@@ -239,8 +239,11 @@ export class TransactionService {
   async getTransactionAnalytics(params?: {
     startDate?: string;
     endDate?: string;
+    partnerBankId?: string;
     merchantId?: string;
+    subMerchantId?: string;
     status?: TransactionStatus;
+    transactionType?: string;
   }): Promise<TransactionAnalytics> {
     try {
       const response = await apiClient.get<ApiResponse<TransactionAnalytics>>(

@@ -61,7 +61,7 @@ export function ChartAreaInteractive() {
   const [timeRange, setTimeRange] = React.useState("month")
   const [chartData, setChartData] = React.useState<ChartDataPoint[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
-  const [, setAnalytics] = React.useState<TransactionAnalytics | null>(null)
+  const [, ] = React.useState<TransactionAnalytics | null>(null)
 
   React.useEffect(() => {
     if (isMobile) {
