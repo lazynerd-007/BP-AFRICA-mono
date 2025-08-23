@@ -218,7 +218,6 @@ export function useCategorizedTransactions(
 }
 
 // Hook for fetching transaction statistics by category
-<<<<<<< HEAD
 export function useTransactionStats(filters?: {
   startDate?: string;
   endDate?: string;
@@ -226,9 +225,6 @@ export function useTransactionStats(filters?: {
   merchantId?: string;
   subMerchantId?: string;
 }) {
-=======
-export function useTransactionStats() {
->>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
   const [stats, setStats] = useState<{
     collection: { count: number; amount: string };
     reversal: { count: number; amount: string };
@@ -247,7 +243,6 @@ export function useTransactionStats() {
     setStats(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-<<<<<<< HEAD
       // Build analytics parameters from filters, excluding 'all' values
       const analyticsParams: {
         startDate?: string;
@@ -273,10 +268,6 @@ export function useTransactionStats() {
       
       // Fetch analytics data from the analytics endpoint with filters
       const analyticsData = await transactionService.getTransactionAnalytics(analyticsParams);
-=======
-      // Fetch analytics data from the analytics endpoint
-      const analyticsData = await transactionService.getTransactionAnalytics();
->>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
       
       console.log('Analytics Data:', analyticsData);
       
@@ -305,11 +296,7 @@ export function useTransactionStats() {
       }));
       console.error('Error fetching transaction stats:', error);
     }
-<<<<<<< HEAD
   }, [filters?.startDate, filters?.endDate, filters?.partnerBankId, filters?.merchantId, filters?.subMerchantId]);
-=======
-  }, []);
->>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
   
   useEffect(() => {
     fetchStats();
