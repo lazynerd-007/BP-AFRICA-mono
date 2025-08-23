@@ -10,11 +10,7 @@ import { useTransactionFilters } from "@/hooks/use-transaction-filters"
 import { Button } from "@/components/ui/button"
 
 interface TransactionFiltersComponentProps {
-<<<<<<< HEAD
   onFiltersChange: (filters: import("@/lib/api/types").EnhancedTransactionFilters) => void
-=======
-  onFiltersChange: (filters: any) => void
->>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
   onDownloadReport: () => void
   isDownloading?: boolean
 }

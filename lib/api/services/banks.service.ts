@@ -38,19 +38,11 @@ export class BankService {
       if (response.data) {
         if (Array.isArray(response.data)) {
           partnerBanks = response.data;
-<<<<<<< HEAD
         } else if ((response as ApiResponse<PartnerBank[]> & {data: {data: PartnerBank[]}}).data && Array.isArray((response as ApiResponse<PartnerBank[]> & {data: {data: PartnerBank[]}}).data.data)) {
           partnerBanks = (response as ApiResponse<PartnerBank[]> & {data: {data: PartnerBank[]}}).data.data;
         }
-      } else if ((response as {data: PartnerBank[]}).data && Array.isArray((response as {data: PartnerBank[]}).data)) {
-        partnerBanks = (response as {data: PartnerBank[]}).data;
-=======
-        } else if ((response as any).data && Array.isArray((response as any).data)) {
-          partnerBanks = (response as any).data;
-        }
-      } else if ((response as any).data && Array.isArray((response as any).data)) {
-        partnerBanks = (response as any).data;
->>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
+       } else if ((response as {data: PartnerBank[]}).data && Array.isArray((response as {data: PartnerBank[]}).data)) {
+          partnerBanks = (response as {data: PartnerBank[]}).data;
       }
       
       console.log('Processed partner banks:', partnerBanks);

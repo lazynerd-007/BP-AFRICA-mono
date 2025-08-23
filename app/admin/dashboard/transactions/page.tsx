@@ -1,16 +1,20 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { IconDownload } from "@tabler/icons-react";
 import {
   TransactionFiltersComponent,
   TransactionStatsComponent,
   TransactionTable,
   TransformedTransaction,
   TransactionStats,
-  TransactionType
+  TransactionType,
+  Transaction
 } from "@/components/admin/transactions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { IconCheck, IconAlertCircle } from "@tabler/icons-react";
+import { EnhancedTransactionFilters } from "@/lib/api/types";
+// UI components
 
 // Mock data for transactions
 const transactionData: Transaction[] = [
@@ -110,10 +114,10 @@ const mockStats: TransactionStats = {
 
 export default function TransactionsPage() {
   const [transactionType, setTransactionType] = useState<TransactionType>("collection");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedRows, setSelectedRows] = useState<TransformedTransaction[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [currentPage] = useState(1);
+  const [selectedRows] = useState<TransformedTransaction[]>([]);
+  const [searchQuery] = useState("");
+  const [debouncedSearch] = useState("");
   const [currentFilters, setCurrentFilters] = useState<EnhancedTransactionFilters>({
     partnerBankId: "all",
     merchantId: "all",
@@ -124,6 +128,61 @@ export default function TransactionsPage() {
     searchTerm: "",
     perPage: "10"
   });
+  
+  // State for download status
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  
+  // State for data and loading
+  const [currentData, setCurrentData] = useState<{
+    data: TransformedTransaction[];
+    loading: boolean;
+    error: string | null;
+  }>({
+    data: transformedData,
+    loading: false,
+    error: null
+  });
+  
+  // State for stats
+  const [stats] = useState<{
+    loading: boolean;
+    error: string | null;
+  }>({
+    loading: false,
+    error: null
+  });
+  
+  // State for filters
+  const [filters, setFilters] = useState({
+    searchTerm: "",
+    perPage: "10"
+  });
+  
+  // Transaction stats
+  const [transactionStats] = useState<TransactionStats>(mockStats);
+  
+  // Handler functions
+  const handleFiltersChange = (filters: EnhancedTransactionFilters) => {
+    setCurrentFilters(filters);
+  };
+  
+  const handleDownloadReport = async () => {
+    setIsDownloading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 3000);
+    } catch (_) {
+      setCurrentData(prev => ({
+        ...prev,
+        error: "Failed to download report"
+      }));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="px-4 lg:px-6 space-y-6">

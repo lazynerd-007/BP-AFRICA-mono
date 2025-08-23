@@ -212,7 +212,6 @@ function AdminDashboard() {
     { id: "all", name: "All Partner Banks" },
     ...partnerBanks.map(bank => {
       // Try different possible ID fields (same fix as in useTransactionFilters)
-<<<<<<< HEAD
       // Handle different possible bank object structures
       const bankWithDynamicProps = bank as PartnerBank & {
         uuid?: string;
@@ -223,10 +222,6 @@ function AdminDashboard() {
       };
       const bankId = bankWithDynamicProps.id || bankWithDynamicProps.uuid || bankWithDynamicProps._id || bankWithDynamicProps.bankId || bank.name;
       const bankName = bankWithDynamicProps.name || bankWithDynamicProps.bankName || bankWithDynamicProps.title || bankId;
-=======
-      const bankId = (bank as any).id || (bank as any).uuid || (bank as any)._id || (bank as any).bankId || bank.name;
-      const bankName = (bank as any).name || (bank as any).bankName || (bank as any).title || bankId;
->>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
       
       return { id: bankId, name: bankName };
     })

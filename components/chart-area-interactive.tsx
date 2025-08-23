@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/toggle-group"
 import { Skeleton } from "@/components/ui/skeleton"
 import { transactionService } from "@/lib/api"
-import { TransactionAnalytics, Transaction } from "@/lib/api/types"
+import { Transaction } from "@/lib/api/types"
 
 export const description = "An interactive area chart with live transaction data"
 
@@ -61,7 +61,6 @@ export function ChartAreaInteractive() {
   const [timeRange, setTimeRange] = React.useState("month")
   const [chartData, setChartData] = React.useState<ChartDataPoint[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
-  const [, ] = React.useState<TransactionAnalytics | null>(null)
 
   React.useEffect(() => {
     if (isMobile) {

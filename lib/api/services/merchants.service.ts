@@ -61,7 +61,6 @@ export class MerchantService {
       );
       
       // Handle different response formats
-<<<<<<< HEAD
       const responseData = response.data || (response as PaginatedResponse<Merchant> & {data: unknown}).data;
       
       if (responseData) {
@@ -71,16 +70,6 @@ export class MerchantService {
           return dataWithNestedStructure.data;
         } else if (dataWithNestedStructure.items && Array.isArray(dataWithNestedStructure.items)) {
           return dataWithNestedStructure.items;
-=======
-      const responseData = response.data || (response as any).data;
-      
-      if (responseData) {
-        // Try different possible data structures
-        if ((responseData as any).data && Array.isArray((responseData as any).data)) {
-          return (responseData as any).data;
-        } else if ((responseData as any).items && Array.isArray((responseData as any).items)) {
-          return (responseData as any).items;
->>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
         } else if (Array.isArray(responseData)) {
           return responseData;
         }
@@ -106,42 +95,25 @@ export class MerchantService {
       limit?: number;
       status?: string;
     }
-<<<<<<< HEAD
   ): Promise<Array<{id: string, name: string, [key: string]: unknown}>> { // Using generic sub-merchant type
     try {
       const response = await apiClient.get<ApiResponse<Array<{id: string, name: string, [key: string]: unknown}>>>(
-=======
-  ): Promise<any[]> { // Using any[] since SubMerchant interface may not be fully defined
-    try {
-      const response = await apiClient.get<ApiResponse<any[]>>(
->>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
         `${MERCHANT_ENDPOINTS.MERCHANT_BY_ID(merchantId)}/sub-merchants`,
         { params }
       );
       
       // Handle different response formats
-<<<<<<< HEAD
       const responseData = response.data || (response as ApiResponse<Array<{id: string, name: string, [key: string]: unknown}>> & {data: unknown}).data;
-=======
-      const responseData = response.data || (response as any).data;
->>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
       
       if (responseData) {
         if (Array.isArray(responseData)) {
           return responseData;
-<<<<<<< HEAD
         }
         const dataWithNestedStructure = responseData as {items?: Array<{id: string, name: string, [key: string]: unknown}>, data?: Array<{id: string, name: string, [key: string]: unknown}>};
         if (dataWithNestedStructure.items && Array.isArray(dataWithNestedStructure.items)) {
           return dataWithNestedStructure.items;
         } else if (dataWithNestedStructure.data && Array.isArray(dataWithNestedStructure.data)) {
           return dataWithNestedStructure.data;
-=======
-        } else if ((responseData as any).items && Array.isArray((responseData as any).items)) {
-          return (responseData as any).items;
-        } else if ((responseData as any).data && Array.isArray((responseData as any).data)) {
-          return (responseData as any).data;
->>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
         }
       }
       

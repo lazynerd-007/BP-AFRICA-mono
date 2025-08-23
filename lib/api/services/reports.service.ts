@@ -51,7 +51,6 @@ export class ReportsService {
    */
   async generateTransactionReport(
     filters: Partial<EnhancedTransactionFilters>
-<<<<<<< HEAD
   ): Promise<ApiResponse<{
     summary: {
       totalTransactions: number;
@@ -81,11 +80,7 @@ export class ReportsService {
           generatedAt: string;
         };
       }>>(
-=======
-  ): Promise<ApiResponse<any>> {
-    try {
-      const response = await apiClient.get<ApiResponse<any>>(
->>>>>>> 998f0609d66907cc6ede657345cf78594e449e65
+
         REPORTS_ENDPOINTS.TRANSACTION_REPORTS,
         {
           params: {
