@@ -282,19 +282,22 @@ function AdminDashboard() {
         }
         
         // Enhanced merchant name extraction with multiple fallback options
-        const transactionAny = transaction as any; // Cast to any to access potentially missing properties
+        const transactionWithExtraProps = transaction as Transaction & {
+          merchant?: { merchantName?: string; name?: string } | string;
+          merchantCode?: string;
+        };
         const merchantName = transaction.merchantName || 
-                            (transactionAny.merchant && typeof transactionAny.merchant === 'object' ? 
-                              transactionAny.merchant.merchantName || transactionAny.merchant.name : transactionAny.merchant) ||
-                            transactionAny.merchantCode || 
+                            (transactionWithExtraProps.merchant && typeof transactionWithExtraProps.merchant === 'object' ? 
+                              transactionWithExtraProps.merchant.merchantName || transactionWithExtraProps.merchant.name : transactionWithExtraProps.merchant) ||
+                            transactionWithExtraProps.merchantCode || 
                             transaction.customerName || 
                             transaction.processor ||
                             `Transaction #${transaction.transactionRef || transaction.id || index + 1}`;
         
         console.log(`📊 Transaction ${index}:`, {
           merchantName: transaction.merchantName,
-          merchant: transactionAny.merchant,
-          merchantCode: transactionAny.merchantCode,
+          merchant: transactionWithExtraProps.merchant,
+          merchantCode: transactionWithExtraProps.merchantCode,
           customerName: transaction.customerName,
           processor: transaction.processor,
           resolvedName: merchantName,
@@ -349,7 +352,6 @@ function AdminDashboard() {
           <SectionCards 
             partnerBankId={selectedBank === 'all' ? undefined : selectedBank}
             timeRange={timeRange}
-            onTimeRangeChange={setTimeRange}
           />
           <div className="mt-6">
             <ChartAreaInteractive 

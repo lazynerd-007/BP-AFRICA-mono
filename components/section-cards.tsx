@@ -21,14 +21,12 @@ import { TransactionAnalytics } from "@/lib/api/types"
 interface SectionCardsProps {
   partnerBankId?: string; // UUID of selected partner bank
   timeRange?: string;
-  onTimeRangeChange?: (timeRange: string) => void;
 }
 
 // Update the component signature
 export function SectionCards({ 
   partnerBankId, 
-  timeRange = '7days',
-  onTimeRangeChange 
+  timeRange = '7days'
 }: SectionCardsProps = {}) {
   const { formatCurrency } = useCurrency();
   const [analytics, setAnalytics] = useState<TransactionAnalytics | null>(null);
@@ -44,7 +42,11 @@ export function SectionCards({
         
         // Calculate date range based on timeRange
         const now = new Date();
-        const analyticsParams: any = {};
+        const analyticsParams: {
+          startDate?: string;
+          endDate?: string;
+          partnerBankId?: string;
+        } = {};
         
         if (timeRange) {
           let startDate: Date;

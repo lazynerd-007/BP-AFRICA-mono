@@ -87,6 +87,118 @@ export function ChartAreaInteractive({
   // Use hook for default data (when no partner bank selected)
   const { currentData: transactionData, fetchTransactions } = useCategorizedTransactions('collection');
   
+  // Helper function to fill missing dates
+  const fillMissingDates = React.useCallback((chartData: ChartDataPoint[], timeRange: string) => {
+    if (chartData.length === 0) return [];
+    
+    const now = new Date();
+    let startDate: Date;
+    
+    switch (timeRange) {
+      case 'today':
+        // For today, just return what we have
+        return chartData;
+      case '7days':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      default:
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    }
+    
+    const filledData = [];
+    const dataMap = new Map(chartData.map(item => [item.date, item]));
+    
+    // Generate all dates in range
+    const currentDate = new Date(startDate);
+    while (currentDate <= now) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      
+      if (dataMap.has(dateStr)) {
+        const existingData = dataMap.get(dateStr);
+        if (existingData) {
+          filledData.push(existingData);
+        }
+      } else {
+        filledData.push({
+          date: dateStr,
+          approved: 0,
+          failed: 0
+        });
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return filledData;
+  }, []);
+
+  // Add this helper function to transform transactions to chart data
+  const transformTransactionsToChart = React.useCallback((transactions: Transaction[]) => {
+    console.log('📊 Transforming', transactions.length, 'transactions to chart data');
+    
+    if (!transactions || transactions.length === 0) {
+      return [];
+    }
+    
+    // Group transactions by date and count status
+    const dateMap = new Map<string, { failed: number; approved: number }>();
+    
+    transactions.forEach(transaction => {
+      // Extract date from transaction
+      const transactionDate = transaction.createdAt || transaction.updatedAt || new Date().toISOString();
+      const date = new Date(transactionDate).toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      // Initialize date entry if it doesn't exist
+      if (!dateMap.has(date)) {
+        dateMap.set(date, { failed: 0, approved: 0 });
+      }
+      
+      // Count based on transaction status with comprehensive mapping
+      const entry = dateMap.get(date)!;
+      const status = transaction.status?.toLowerCase() || 'unknown';
+      
+      // Success statuses
+      if (status === 'completed' || status === 'success' || status === 'successful' || 
+          status === 'settled' || status === 'confirmed' || status === 'approved') {
+        entry.approved += 1;
+      } 
+      // Failure statuses
+      else if (status === 'failed' || status === 'error' || status === 'rejected' || 
+               status === 'declined' || status === 'cancelled' || status === 'timeout' ||
+               status === 'expired' || status === 'blocked') {
+        entry.failed += 1;
+      } 
+      // Pending/processing statuses - count as approved to show activity
+      else if (status === 'pending' || status === 'processing' || status === 'initiated' ||
+               status === 'in_progress' || status === 'submitted') {
+        entry.approved += 1;
+      }
+      // Unknown statuses
+      else {
+        console.log('📊 Unknown transaction status:', status);
+        // You can choose to count unknown as failed or ignore
+        // entry.failed += 1; // Uncomment if you want to count unknown as failed
+      }
+    });
+    
+    // Convert Map to array and sort by date
+    const chartDataPoints = Array.from(dateMap.entries())
+      .map(([date, counts]) => ({
+        date,
+        failed: counts.failed,
+        approved: counts.approved
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    console.log('📊 Generated chart data points:', chartDataPoints);
+    
+    // Fill in missing dates for better visualization
+    return fillMissingDates(chartDataPoints, timeRange);
+  }, [timeRange, fillMissingDates]);
+  
   // Update the fetchAnalyticsData function to fetch individual transactions instead:
   const fetchAnalyticsData = React.useCallback(async () => {
     setIsLoading(true);
@@ -168,7 +280,7 @@ export function ChartAreaInteractive({
     } finally {
       setIsLoading(false);
     }
-  }, [timeRange, partnerBankId]);
+  }, [timeRange, partnerBankId, fetchTransactions, transformTransactionsToChart]);
 
   // Hook-based data fetching (for all banks)
   const fetchHookData = React.useCallback(async () => {
@@ -273,117 +385,7 @@ export function ChartAreaInteractive({
     }
   }, [transactionData, timeRange, partnerBankId]);
 
-  // Add this helper function to transform transactions to chart data
-  const transformTransactionsToChart = (transactions: Transaction[]) => {
-    console.log('📊 Transforming', transactions.length, 'transactions to chart data');
-    
-    if (!transactions || transactions.length === 0) {
-      return [];
-    }
-    
-    // Group transactions by date and count status
-    const dateMap = new Map<string, { failed: number; approved: number }>();
-    
-    transactions.forEach(transaction => {
-      // Extract date from transaction
-      const transactionDate = transaction.createdAt || transaction.updatedAt || new Date().toISOString();
-      const date = new Date(transactionDate).toISOString().split('T')[0]; // YYYY-MM-DD format
-      
-      // Initialize date entry if it doesn't exist
-      if (!dateMap.has(date)) {
-        dateMap.set(date, { failed: 0, approved: 0 });
-      }
-      
-      // Count based on transaction status with comprehensive mapping
-      const entry = dateMap.get(date)!;
-      const status = transaction.status?.toLowerCase() || 'unknown';
-      
-      // Success statuses
-      if (status === 'completed' || status === 'success' || status === 'successful' || 
-          status === 'settled' || status === 'confirmed' || status === 'approved') {
-        entry.approved += 1;
-      } 
-      // Failure statuses
-      else if (status === 'failed' || status === 'error' || status === 'rejected' || 
-               status === 'declined' || status === 'cancelled' || status === 'timeout' ||
-               status === 'expired' || status === 'blocked') {
-        entry.failed += 1;
-      } 
-      // Pending/processing statuses - count as approved to show activity
-      else if (status === 'pending' || status === 'processing' || status === 'initiated' ||
-               status === 'in_progress' || status === 'submitted') {
-        entry.approved += 1;
-      }
-      // Unknown statuses
-      else {
-        console.log('📊 Unknown transaction status:', status);
-        // You can choose to count unknown as failed or ignore
-        // entry.failed += 1; // Uncomment if you want to count unknown as failed
-      }
-    });
-    
-    // Convert Map to array and sort by date
-    const chartDataPoints = Array.from(dateMap.entries())
-      .map(([date, counts]) => ({
-        date,
-        failed: counts.failed,
-        approved: counts.approved
-      }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    console.log('📊 Generated chart data points:', chartDataPoints);
-    
-    // Fill in missing dates for better visualization
-    return fillMissingDates(chartDataPoints, timeRange);
-  };
-
-  // Helper function to fill missing dates
-  const fillMissingDates = (chartData: ChartDataPoint[], timeRange: string) => {
-    if (chartData.length === 0) return [];
-    
-    const now = new Date();
-    let startDate: Date;
-    
-    switch (timeRange) {
-      case 'today':
-        // For today, just return what we have
-        return chartData;
-      case '7days':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case 'month':
-        startDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      default:
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    }
-    
-    const filledData = [];
-    const dataMap = new Map(chartData.map(item => [item.date, item]));
-    
-    // Generate all dates in range
-    const currentDate = new Date(startDate);
-    while (currentDate <= now) {
-      const dateStr = currentDate.toISOString().split('T')[0];
-      
-      if (dataMap.has(dateStr)) {
-        const existingData = dataMap.get(dateStr);
-        if (existingData) {
-          filledData.push(existingData);
-        }
-      } else {
-        filledData.push({
-          date: dateStr,
-          approved: 0,
-          failed: 0
-        });
-      }
-      
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    return filledData;
-  };
+  
 
   // Since the API already filters data based on the date range we provide,
   // we don't need additional client-side filtering
@@ -496,10 +498,10 @@ export function ChartAreaInteractive({
                       day: "numeric",
                     })
                   } else {
-                    return date.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })
+                  return date.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })
                   }
                 }}
               />
