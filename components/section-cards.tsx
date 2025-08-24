@@ -17,7 +17,19 @@ import { useCurrency } from "@/lib/currency-context"
 import { transactionService } from "@/lib/api"
 import { TransactionAnalytics } from "@/lib/api/types"
 
-export function SectionCards() {
+// Add interface for props at the top of the file after imports
+interface SectionCardsProps {
+  partnerBankId?: string; // UUID of selected partner bank
+  timeRange?: string;
+  onTimeRangeChange?: (timeRange: string) => void;
+}
+
+// Update the component signature
+export function SectionCards({ 
+  partnerBankId, 
+  timeRange = '7days',
+  onTimeRangeChange 
+}: SectionCardsProps = {}) {
   const { formatCurrency } = useCurrency();
   const [analytics, setAnalytics] = useState<TransactionAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +39,45 @@ export function SectionCards() {
     const fetchAnalytics = async () => {
       try {
         setLoading(true);
-        const data = await transactionService.getTransactionAnalytics();
+        console.log('📊 Fetching analytics for partner bank:', partnerBankId || 'All banks');
+        console.log('📊 Time range:', timeRange);
+        
+        // Calculate date range based on timeRange
+        const now = new Date();
+        const analyticsParams: any = {};
+        
+        if (timeRange) {
+          let startDate: Date;
+          
+          switch (timeRange) {
+            case 'today':
+              startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              break;
+            case '7days':
+              startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              break;
+            case 'month':
+              startDate = new Date(now.getFullYear(), 0, 1); // January to present
+              break;
+            default:
+              startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          }
+          
+          analyticsParams.startDate = startDate.toISOString().split('T')[0];
+          analyticsParams.endDate = now.toISOString().split('T')[0];
+          
+          console.log('📊 Date range:', analyticsParams.startDate, 'to', analyticsParams.endDate);
+        }
+        
+        // Add partner bank filter if selected
+        if (partnerBankId && partnerBankId !== 'all') {
+          analyticsParams.partnerBankId = partnerBankId;
+          console.log('📊 Filtering by partner bank UUID:', partnerBankId);
+        }
+        
+        const data = await transactionService.getTransactionAnalytics(analyticsParams);
+        console.log('📊 Analytics data received:', data);
+        
         setAnalytics(data);
         setError(null);
       } catch (err) {
@@ -39,7 +89,7 @@ export function SectionCards() {
     };
 
     fetchAnalytics();
-  }, []);
+  }, [partnerBankId, timeRange]); // Add timeRange to dependencies
 
   if (loading) {
     return (
@@ -76,6 +126,20 @@ export function SectionCards() {
     );
   }
 
+  // Helper function to get time range description
+  const getTimeRangeDescription = () => {
+    switch (timeRange) {
+      case 'today':
+        return 'today';
+      case '7days':
+        return 'last 7 days';
+      case 'month':
+        return 'year to date';
+      default:
+        return 'selected period';
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:gap-6">
       {/* Collections Card */}
@@ -99,7 +163,8 @@ export function SectionCards() {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm mt-auto">
           <div className="text-green-600/70">
-            Total amount collected this month
+            Total amount collected {getTimeRangeDescription()}
+            {partnerBankId && partnerBankId !== 'all' && ' (Partner Bank filtered)'}
           </div>
         </CardFooter>
       </Card>
@@ -125,7 +190,8 @@ export function SectionCards() {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm mt-auto">
           <div className="text-red-600/70">
-            Failed transaction amount this month
+            Failed transactions {getTimeRangeDescription()}
+            {partnerBankId && partnerBankId !== 'all' && ' (Partner Bank filtered)'}
           </div>
         </CardFooter>
       </Card>
@@ -151,7 +217,8 @@ export function SectionCards() {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm mt-auto">
           <div className="text-blue-600/70">
-            Total payout amount this month
+            Total payouts {getTimeRangeDescription()}
+            {partnerBankId && partnerBankId !== 'all' && ' (Partner Bank filtered)'}
           </div>
         </CardFooter>
       </Card>

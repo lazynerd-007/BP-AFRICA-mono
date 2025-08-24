@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 
 // No more mock data imports
+import { useCategorizedTransactions } from '@/hooks/use-categorized-transactions';
 
 export function DashboardContent() {
   const { user } = useAuthStore();
@@ -62,6 +63,7 @@ function AdminDashboard() {
   const { currency } = useCurrency();
   const [transactionTab, setTransactionTab] = useState("recent");
   const [selectedBank, setSelectedBank] = useState("all");
+  const [timeRange, setTimeRange] = useState("7days"); // Add this line
   const [partnerBanks, setPartnerBanks] = useState<PartnerBank[]>([]);
   const [banksLoading, setBanksLoading] = useState(true);
   const [topMerchants, setTopMerchants] = useState<TopPerformingMerchant[]>([]);
@@ -142,70 +144,16 @@ function AdminDashboard() {
     fetchCountAndVolume();
   }, []);
 
-  // Fetch recent transactions on component mount
-  useEffect(() => {
-    const fetchRecentTransactions = async () => {
-      try {
-        setRecentTransactionsLoading(true);
-        const response = await transactionService.getTransactions({
-          page: 1,
-          perPage: 10,
-          transactionType: 'money_in',
-          paginateData: true
-        });
-        
-        // Enhanced validation for malformed JSON responses
-        if (typeof response === 'string') {
-          console.error('Received string response instead of JSON object:');
-          console.error('Response length:', (response as string).length);
-          console.error('First 500 chars:', (response as string).substring(0, 500));
-          console.error('Last 500 chars:', (response as string).substring(Math.max(0, (response as string).length - 500)));
-          
-          // Check for unterminated string patterns
-          const unterminatedStringPattern = /"[^"]*$/;
-          if (unterminatedStringPattern.test(response)) {
-            console.error('Detected unterminated string in response');
-          }
-          
-          throw new Error('Invalid JSON response from server - received string instead of object');
-        }
-        
-        // Handle different response formats
-        let transactionsData: Transaction[] = [];
-        if (response && typeof response === 'object') {
-          if (Array.isArray(response)) {
-            transactionsData = response;
-          } else if (response.data && Array.isArray(response.data)) {
-            transactionsData = response.data;
-          }
-        }
-        
-        if (transactionsData.length > 0) {
-          console.log('Recent transactions fetched:', transactionsData.length, 'items'); // Debug log
-          setRecentTransactions(transactionsData);
-        } else {
-          console.log('No recent transactions data or invalid format:', typeof response); // Debug log
-          setRecentTransactions([]);
-        }
-      } catch (error) {
-        console.error('Failed to fetch recent transactions:', error);
-        
-        // Enhanced error logging for JSON parse errors
-        if (error instanceof Error) {
-          if (error.message.includes('JSON') || error.message.includes('unterminated')) {
-            console.error('JSON parsing error detected:', error.message);
-            console.error('This suggests the API returned malformed JSON data');
-          }
-        }
-        
-        setRecentTransactions([]);
-      } finally {
-        setRecentTransactionsLoading(false);
-      }
-    };
+  const { currentData: recentTransactionsData } = useCategorizedTransactions('collection');
 
-    fetchRecentTransactions();
-  }, []);
+  useEffect(() => {
+    setRecentTransactionsLoading(recentTransactionsData.loading);
+    if (recentTransactionsData.data && recentTransactionsData.data.length > 0) {
+      setRecentTransactions(recentTransactionsData.data.slice(0, 10)); // Take first 10 for dashboard
+    } else if (!recentTransactionsData.loading) {
+      setRecentTransactions([]);
+    }
+  }, [recentTransactionsData]);
 
   // Create bank options including "All" option
   const bankOptions = [
@@ -333,11 +281,29 @@ function AdminDashboard() {
           schemeName = 'telecel';
         }
         
-        console.log(`📊 Transaction ${index}: Merchant=${transaction.merchantName || 'N/A'}, Processor=${processorValue || 'N/A'} -> Scheme=${schemeName || 'N/A'}`);
+        // Enhanced merchant name extraction with multiple fallback options
+        const transactionAny = transaction as any; // Cast to any to access potentially missing properties
+        const merchantName = transaction.merchantName || 
+                            (transactionAny.merchant && typeof transactionAny.merchant === 'object' ? 
+                              transactionAny.merchant.merchantName || transactionAny.merchant.name : transactionAny.merchant) ||
+                            transactionAny.merchantCode || 
+                            transaction.customerName || 
+                            transaction.processor ||
+                            `Transaction #${transaction.transactionRef || transaction.id || index + 1}`;
+        
+        console.log(`📊 Transaction ${index}:`, {
+          merchantName: transaction.merchantName,
+          merchant: transactionAny.merchant,
+          merchantCode: transactionAny.merchantCode,
+          customerName: transaction.customerName,
+          processor: transaction.processor,
+          resolvedName: merchantName,
+          allFields: Object.keys(transaction).slice(0, 10) // Show first 10 fields
+        });
         
         return {
           id: index + 1,
-          merchant: transaction.merchantName || `Merchant ${index + 1}`, // ✅ Uses merchantName from API
+          merchant: merchantName,
           date: transaction.createdAt || new Date().toISOString(),
           tid: transaction.transactionRef || transaction.id,
           scheme: schemeName, // ✅ Uses processor from API (mapped for colors)
@@ -380,9 +346,17 @@ function AdminDashboard() {
         </div>
         
         <div className="mb-8">
-          <SectionCards />
+          <SectionCards 
+            partnerBankId={selectedBank === 'all' ? undefined : selectedBank}
+            timeRange={timeRange}
+            onTimeRangeChange={setTimeRange}
+          />
           <div className="mt-6">
-            <ChartAreaInteractive />
+            <ChartAreaInteractive 
+              timeRange={timeRange}
+              onTimeRangeChange={setTimeRange}
+              partnerBankId={selectedBank === 'all' ? undefined : selectedBank}
+            />
             {selectedBank !== "all" && (
               <div className="mt-2 text-sm text-muted-foreground flex items-center justify-end">
                 <IconBuildingBank className="h-4 w-4 mr-1" />
