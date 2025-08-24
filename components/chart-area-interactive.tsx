@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/toggle-group"
 import { Skeleton } from "@/components/ui/skeleton"
 import { transactionService } from "@/lib/api"
-import { TransactionAnalytics, Transaction } from "@/lib/api/types"
+import { Transaction } from "@/lib/api/types"
 
 export const description = "An interactive area chart with live transaction data"
 
@@ -70,7 +70,7 @@ export function ChartAreaInteractive({
 }: ChartAreaInteractiveProps = {}) {
   const isMobile = useIsMobile()
   const [isLoading, setIsLoading] = React.useState(false)
-  const [chartData, setChartData] = React.useState<any[]>([])
+  const [chartData, setChartData] = React.useState<ChartDataPoint[]>([])
   
   // Use external timeRange if provided, otherwise use internal state
   const [internalTimeRange, setInternalTimeRange] = React.useState("7days")
@@ -87,49 +87,37 @@ export function ChartAreaInteractive({
   // Use hook for default data (when no partner bank selected)
   const { currentData: transactionData, fetchTransactions } = useCategorizedTransactions('collection');
   
-  // Update the main useEffect to handle both cases properly:
-  React.useEffect(() => {
-    if (partnerBankId && partnerBankId !== 'all') {
-      // Use direct transaction fetching for partner bank filtering
-      console.log('📊 Using direct transaction fetch for partner bank:', partnerBankId);
-      fetchAnalyticsData();
-    } else {
-      // Use existing hook for all banks
-      console.log('📊 Using hook for all banks');
-      fetchHookData();
-    }
-  }, [timeRange, partnerBankId]);
-
   // Update the fetchAnalyticsData function to fetch individual transactions instead:
-  const fetchAnalyticsData = async () => {
+  const fetchAnalyticsData = React.useCallback(async () => {
+    setIsLoading(true);
+    
+    // Calculate date range based on timeframe
+    const now = new Date();
+    let startDate: Date;
+    let perPage: number;
+    
+    switch (timeRange) {
+      case 'today':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        perPage = 500; // Get enough data for the day
+        break;
+      case '7days':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        perPage = 1000; // Get enough data for the week
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        perPage = 2000; // Get enough data for the year
+        break;
+      default:
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        perPage = 1000;
+    }
+    
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = now.toISOString().split('T')[0];
+    
     try {
-      setIsLoading(true);
-      
-      // Calculate date range based on timeframe
-      const now = new Date();
-      let startDate: Date;
-      let perPage: number;
-      
-      switch (timeRange) {
-        case 'today':
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          perPage = 500; // Get enough data for the day
-          break;
-        case '7days':
-          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          perPage = 1000; // Get enough data for the week
-          break;
-        case 'month':
-          startDate = new Date(now.getFullYear(), 0, 1);
-          perPage = 2000; // Get enough data for the year
-          break;
-        default:
-          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          perPage = 1000;
-      }
-      
-      const startDateStr = startDate.toISOString().split('T')[0];
-      const endDateStr = now.toISOString().split('T')[0];
       
       console.log(`📊 Fetching partner bank transactions: ${partnerBankId}`);
       console.log(`📊 Date range: ${startDateStr} to ${endDateStr}, perPage: ${perPage}`);
@@ -147,10 +135,8 @@ export function ChartAreaInteractive({
       console.log('📊 Partner bank transactions received:', response);
       
       // Extract transactions from response
-      let transactions: any[] = [];
-      if (response.data?.data && Array.isArray(response.data.data)) {
-        transactions = response.data.data;
-      } else if (response.data?.items && Array.isArray(response.data.items)) {
+      let transactions: Transaction[] = [];
+      if (response.data?.items && Array.isArray(response.data.items)) {
         transactions = response.data.items;
       } else if (Array.isArray(response.data)) {
         transactions = response.data;
@@ -171,8 +157,8 @@ export function ChartAreaInteractive({
         await fetchTransactions('collection', {
           page: 1,
           perPage: 1000,
-          startDate: startDate.toISOString().split('T')[0],
-          endDate: now.toISOString().split('T')[0],
+          startDate: startDateStr,
+          endDate: endDateStr,
           partnerBankId: partnerBankId
         });
       } catch (fallbackError) {
@@ -182,10 +168,10 @@ export function ChartAreaInteractive({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [timeRange, partnerBankId]);
 
   // Hook-based data fetching (for all banks)
-  const fetchHookData = async () => {
+  const fetchHookData = React.useCallback(async () => {
     const now = new Date();
     let startDate: Date;
     let perPage: number;
@@ -219,32 +205,20 @@ export function ChartAreaInteractive({
       startDate: startDateStr,
       endDate: endDateStr,
     });
-  };
+  }, [timeRange, fetchTransactions]);
 
-  // Transform analytics data to chart format
-  const transformAnalyticsToChart = (analyticsData: any, timeRange: string) => {
-    console.log('📊 Transforming analytics data:', analyticsData);
-    
-    // Handle different analytics data structures
-    if (analyticsData.dailyStats && Array.isArray(analyticsData.dailyStats)) {
-      // If we have daily breakdown
-      return analyticsData.dailyStats.map((stat: any) => ({
-        date: stat.date,
-        approved: stat.successfulTransactions || stat.approved || 0,
-        failed: stat.failedTransactions || stat.failed || 0,
-      })).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // Update the main useEffect to handle both cases properly:
+  React.useEffect(() => {
+    if (partnerBankId && partnerBankId !== 'all') {
+      // Use direct transaction fetching for partner bank filtering
+      console.log('📊 Using direct transaction fetch for partner bank:', partnerBankId);
+      fetchAnalyticsData();
     } else {
-      // Create single data point from totals
-      const now = new Date();
-      const dateStr = now.toISOString().split('T')[0];
-      
-      return [{
-        date: dateStr,
-        approved: analyticsData.successTotalMoneyInCount || 0,
-        failed: analyticsData.failedTotalCount || 0,
-      }];
+      // Use existing hook for all banks
+      console.log('📊 Using hook for all banks');
+      fetchHookData();
     }
-  };
+  }, [timeRange, partnerBankId, fetchAnalyticsData, fetchHookData]);
 
   // Process hook data when using all banks
   React.useEffect(() => {
@@ -300,7 +274,7 @@ export function ChartAreaInteractive({
   }, [transactionData, timeRange, partnerBankId]);
 
   // Add this helper function to transform transactions to chart data
-  const transformTransactionsToChart = (transactions: any[]) => {
+  const transformTransactionsToChart = (transactions: Transaction[]) => {
     console.log('📊 Transforming', transactions.length, 'transactions to chart data');
     
     if (!transactions || transactions.length === 0) {
@@ -364,7 +338,7 @@ export function ChartAreaInteractive({
   };
 
   // Helper function to fill missing dates
-  const fillMissingDates = (chartData: any[], timeRange: string) => {
+  const fillMissingDates = (chartData: ChartDataPoint[], timeRange: string) => {
     if (chartData.length === 0) return [];
     
     const now = new Date();
@@ -393,7 +367,10 @@ export function ChartAreaInteractive({
       const dateStr = currentDate.toISOString().split('T')[0];
       
       if (dataMap.has(dateStr)) {
-        filledData.push(dataMap.get(dateStr));
+        const existingData = dataMap.get(dateStr);
+        if (existingData) {
+          filledData.push(existingData);
+        }
       } else {
         filledData.push({
           date: dateStr,
