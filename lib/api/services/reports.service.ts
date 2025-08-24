@@ -80,7 +80,6 @@ export class ReportsService {
           generatedAt: string;
         };
       }>>(
-
         REPORTS_ENDPOINTS.TRANSACTION_REPORTS,
         {
           params: {

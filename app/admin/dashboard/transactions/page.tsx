@@ -1,123 +1,43 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   TransactionFiltersComponent,
   TransactionStatsComponent,
   TransactionTable,
   TransformedTransaction,
   TransactionStats,
-  TransactionType,
-  Transaction
+  TransactionType
 } from "@/components/admin/transactions";
+import { useCategorizedTransactions, useTransactionStats } from "@/hooks/use-categorized-transactions";
+import { Transaction, EnhancedTransactionFilters } from "@/lib/api/types";
+import { reportsService } from "@/lib/api/services/reports.service";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { IconCheck, IconAlertCircle } from "@tabler/icons-react";
-import { EnhancedTransactionFilters } from "@/lib/api/types";
-// UI components
+import { IconAlertCircle, IconCheck } from "@tabler/icons-react";
 
-// Mock data for transactions
-const transactionData: Transaction[] = [
-  {
-    id: 1,
-    merchantName: "TechStore Ghana",
-    date: "2024-05-15",
-    tid: "TID123456",
-    terminalId: "AB123456",
-    scheme: "MTN Mobile Money",
-    reference: "REF78901234",
-    amount: "GHS 2,500.00",
-    netAmount: "GHS 2,475.00",
-    customerNumber: "233541234567",
-    status: "SUCCESS"
-  },
-  {
-    id: 2,
-    merchantName: "FoodMart Accra",
-    date: "2024-05-14",
-    tid: "TID789012",
-    terminalId: "CD789012",
-    scheme: "Telecel",
-    reference: "REF56789012",
-    amount: "GHS 850.00",
-    netAmount: "GHS 841.50",
-    customerNumber: "233551234567",
-    status: "SUCCESS"
-  },
-  {
-    id: 3,
-    merchantName: "Pharmacy Plus",
-    date: "2024-05-14",
-    tid: "TID345678",
-    terminalId: "EF345678",
-    scheme: "AirtelTigo Money",
-    reference: "REF34567890",
-    amount: "GHS 1,200.00",
-    netAmount: "GHS 1,188.00",
-    customerNumber: "233561234567",
-    status: "PENDING"
-  },
-  {
-    id: 4,
-    merchantName: "ElectroWorld",
-    date: "2024-05-13",
-    tid: "TID901234",
-    terminalId: "GH901234",
-    scheme: "MTN Mobile Money",
-    reference: "REF12345678",
-    amount: "GHS 5,000.00",
-    netAmount: "GHS 4,950.00",
-    customerNumber: "233571234567",
-    status: "SUCCESS"
-  },
-  {
-    id: 5,
-    merchantName: "Fashion House",
-    date: "2024-05-13",
-    tid: "TID567890",
-    terminalId: "IJ567890",
-    scheme: "Telecel",
-    reference: "REF90123456",
-    amount: "GHS 3,200.00",
-    netAmount: "GHS 3,168.00",
-    customerNumber: "233581234567",
-    status: "FAILED"
+// Transform API transaction data to match the expected format
+const transformTransactionData = (transactions: Transaction[]): TransformedTransaction[] => {
+  if (!transactions || !Array.isArray(transactions)) {
+    return [];
   }
-];
 
-// Convert to the schema format expected by DataTable
-const transformedData: TransformedTransaction[] = transactionData.map(item => ({
-  id: item.id,
-  merchant: item.merchantName,
-  date: item.date,
-  tid: item.terminalId,
-  scheme: item.scheme,
-  amount: item.amount,
-  status: item.status
-}));
-
-// Mock stats data
-const mockStats: TransactionStats = {
-  successfulCollections: {
-    count: 2,
-    amount: "GHS0.02"
-  },
-  failedTransactions: {
-    count: 1868,
-    amount: "GHS950,421.45"
-  },
-  successfulPayouts: {
-    count: 0,
-    amount: "GHS0.00"
-  }
+  return transactions.map((transaction, index) => ({
+    id: parseInt(transaction.id) || index + 1,
+    merchant: (transaction as Transaction & { merchant?: { merchantName?: string } }).merchant?.merchantName || transaction.merchantName || 'Unknown Merchant',
+    date: transaction.createdAt || new Date().toISOString(),
+    tid: transaction.transactionRef || transaction.id,
+    scheme: transaction.processor || transaction.telco || 'Unknown',
+    amount: `GHS ${parseFloat(String(transaction.amount || '0')).toFixed(2)}`,
+    status: transaction.status?.toUpperCase() || 'UNKNOWN'
+  }));
 };
 
 export default function TransactionsPage() {
   const [transactionType, setTransactionType] = useState<TransactionType>("collection");
-  const [currentPage] = useState(1);
-  const [selectedRows] = useState<TransformedTransaction[]>([]);
-  const [searchQuery] = useState("");
-  const [debouncedSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRows, setSelectedRows] = useState<TransformedTransaction[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentFilters, setCurrentFilters] = useState<EnhancedTransactionFilters>({
     partnerBankId: "all",
     merchantId: "all",
@@ -128,59 +48,130 @@ export default function TransactionsPage() {
     searchTerm: "",
     perPage: "10"
   });
-  
-  // State for download status
-  const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  
-  // State for data and loading
-  const [currentData, setCurrentData] = useState<{
-    data: TransformedTransaction[];
-    loading: boolean;
-    error: string | null;
-  }>({
-    data: transformedData,
-    loading: false,
-    error: null
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
+
+  // Use our custom hooks
+  const {
+    currentData,
+    fetchTransactions,
+    setCurrentCategory,
+    currentCategory,
+  } = useCategorizedTransactions(transactionType);
+
+  const { stats } = useTransactionStats({
+    startDate: currentFilters.startDate,
+    endDate: currentFilters.endDate,
+    partnerBankId: currentFilters.partnerBankId,
+    merchantId: currentFilters.merchantId,
+    subMerchantId: currentFilters.subMerchantId,
   });
-  
-  // State for stats
-  const [stats] = useState<{
-    loading: boolean;
-    error: string | null;
-  }>({
-    loading: false,
-    error: null
-  });
-  
-  // State for filters
-  const [filters, setFilters] = useState({
-    searchTerm: "",
-    perPage: "10"
-  });
-  
-  // Transaction stats
-  const [transactionStats] = useState<TransactionStats>(mockStats);
-  
-  // Handler functions
-  const handleFiltersChange = (filters: EnhancedTransactionFilters) => {
-    setCurrentFilters(filters);
-  };
-  
-  const handleDownloadReport = async () => {
+
+  // Update category when transaction type changes
+  useEffect(() => {
+    setCurrentCategory(transactionType);
+  }, [transactionType, setCurrentCategory]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset page when search changes
+  useEffect(() => {
+    if (debouncedSearch !== "") {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearch]);
+
+  // Handle filter changes from the filter component
+  const handleFiltersChange = useCallback((newFilters: EnhancedTransactionFilters) => {
+    setCurrentFilters(newFilters);
+    setCurrentPage(1); // Reset page when filters change
+  }, []);
+
+  // Refetch data when filters, page, or search changes
+  useEffect(() => {
+    const queryParams = {
+      page: currentPage,
+      perPage: parseInt(currentFilters.perPage) || 10,
+      ...(currentFilters.startDate && { startDate: currentFilters.startDate }),
+      ...(currentFilters.endDate && { endDate: currentFilters.endDate }),
+      ...(currentFilters.partnerBankId !== "all" && { partnerBankId: currentFilters.partnerBankId }),
+      ...(currentFilters.merchantId !== "all" && { merchantId: currentFilters.merchantId }),
+      ...(currentFilters.subMerchantId !== "all" && { subMerchantId: currentFilters.subMerchantId }),
+      ...(debouncedSearch && { search: debouncedSearch }),
+    };
+
+    fetchTransactions(currentCategory, queryParams);
+  }, [
+    currentCategory,
+    currentPage,
+    currentFilters,
+    debouncedSearch,
+    fetchTransactions
+  ]);
+
+  // Reset page when transaction type changes
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedRows([]);
+  }, [transactionType]);
+
+  // Transform current data - no client-side filtering needed since search is server-side
+  const transformedData = transformTransactionData(currentData.data);
+
+  // Handle search input change
+  const handleSearchChange = useCallback((search: string) => {
+    setSearchQuery(search);
+    setCurrentFilters(prev => ({ ...prev, searchTerm: search })); // Keep for UI display
+  }, []);
+
+  // Handle download report
+  const handleDownloadReport = useCallback(async () => {
+    if (isDownloading) return;
+
     setIsDownloading(true);
+    setDownloadSuccess(false);
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const blob = await reportsService.downloadTransactionFile(currentFilters, 'csv');
+      
+      // Generate filename with current date and filters
+      const date = new Date().toISOString().split('T')[0];
+      const filterSuffix = currentFilters.partnerBankId !== 'all' ? `_${currentFilters.partnerBankId}` : '';
+      const fileName = `transactions_${date}${filterSuffix}.csv`;
+      
+      reportsService.triggerFileDownload(blob, fileName);
       setDownloadSuccess(true);
+      
+      // Hide success message after 3 seconds
       setTimeout(() => setDownloadSuccess(false), 3000);
-    } catch (_) {
-      setCurrentData(prev => ({
-        ...prev,
-        error: "Failed to download report"
-      }));
+    } catch (error) {
+      console.error('Failed to download report:', error);
+      // Could show error toast here
     } finally {
       setIsDownloading(false);
+    }
+  }, [currentFilters, isDownloading]);
+
+  // Convert stats to expected format
+  const transactionStats: TransactionStats = {
+    successfulCollections: {
+      count: stats.collection.count,
+      amount: stats.collection.amount
+    },
+    failedTransactions: {
+      count: stats.reversal.count,
+      amount: stats.reversal.amount
+    },
+    successfulPayouts: {
+      count: stats.payout.count,
+      amount: stats.payout.amount
     }
   };
 
@@ -239,10 +230,16 @@ export default function TransactionsPage() {
         data={transformedData}
         transactionType={transactionType}
         onTransactionTypeChange={setTransactionType}
-        searchTerm={filters.searchTerm}
-        onSearchChange={(search) => setFilters(prev => ({ ...prev, searchTerm: search }))}
-        perPage={filters.perPage}
-        onPerPageChange={(perPage) => setFilters(prev => ({ ...prev, perPage }))}
+        searchTerm={searchQuery}
+        onSearchChange={handleSearchChange}
+        perPage={currentFilters.perPage}
+        onPerPageChange={(perPage) => setCurrentFilters(prev => ({ ...prev, perPage }))}
+        loading={currentData.loading}
+        selectedRows={selectedRows}
+        currentPage={currentPage}
+        totalPages={currentData.meta?.totalPages || 1}
+        onPageChange={setCurrentPage}
+        totalCount={currentData.meta?.total || 0}
       />
     </div>
   );

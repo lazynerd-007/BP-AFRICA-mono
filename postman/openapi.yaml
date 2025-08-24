@@ -1,0 +1,2420 @@
+openapi: 3.0.3
+info:
+  title: BluPay Africa Backend API
+  description: |
+    BluPay Africa Backend is a comprehensive payment processing platform that supports mobile money transactions, card payments, and merchant management across multiple telco providers in Ghana.
+    
+    ## Authentication
+    The API supports multiple authentication methods:
+    - **Bearer Token**: JWT authentication for user-authenticated endpoints
+    - **Secret Key**: API key authentication for transaction processing
+    - **Multi-Auth**: Some endpoints support either Bearer Token OR Secret Key
+    
+    ## Rate Limiting
+    - General endpoints: No explicit rate limiting
+    - Web endpoints: 5 requests per 60 seconds
+    - Webhook endpoints: No rate limiting
+  version: 1.0.0
+  contact:
+    name: BluPay Africa Support
+    email: support@blupay.africa
+    url: https://blupay.africa
+  license:
+    name: Proprietary
+    url: https://blupay.africa/license
+
+servers:
+  - url: https://api.blupay.africa
+    description: Production server
+  - url: https://staging-api.blupay.africa
+    description: Staging server
+
+security:
+  - BearerAuth: []
+  - SecretKeyAuth: []
+
+paths:
+  # Authentication Endpoints
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User Login
+      description: Authenticate user with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthEmailLoginDto'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/login/{partnerbank}:
+    post:
+      tags:
+        - Authentication
+      summary: Partner Bank Login
+      description: Partner bank specific login
+      security: []
+      parameters:
+        - name: partnerbank
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Partner bank slug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthEmailLoginDto'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get Current User
+      description: Get current user profile information
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /auth/otp-request:
+    post:
+      tags:
+        - Authentication
+      summary: Request OTP
+      description: Request OTP for various purposes
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestOtpDto'
+      responses:
+        '200':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/initiate-reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Initiate Password Reset
+      description: Initiate password reset process
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitiatePwdReset'
+      responses:
+        '200':
+          description: Password reset initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/complete-reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Complete Password Reset
+      description: Complete password reset with token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteResetPasswordDto'
+      responses:
+        '200':
+          description: Password reset completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # Transaction Endpoints
+  /transactions:
+    post:
+      tags:
+        - Transactions
+      summary: Process Mobile Money Transaction
+      description: Process a mobile money transaction
+      security:
+        - SecretKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionDto'
+      responses:
+        '200':
+          description: Transaction initiated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      tags:
+        - Transactions
+      summary: Get All Transactions (Admin Only)
+      description: Get all transactions with filtering
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - $ref: '#/components/parameters/PartnerBankId'
+        - $ref: '#/components/parameters/MerchantBank'
+        - $ref: '#/components/parameters/TransactionType'
+      responses:
+        '200':
+          description: Transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          transactions:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Transaction'
+                          meta:
+                            $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /transactions/card:
+    post:
+      tags:
+        - Transactions
+      summary: Process Card Transaction
+      description: Process a card transaction
+      security:
+        - SecretKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionDto'
+      responses:
+        '200':
+          description: Transaction initiated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /transactions/analytics:
+    get:
+      tags:
+        - Transactions
+      summary: Get Transaction Analytics
+      description: Get transaction analytics and graph data for dashboard
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: range
+          in: query
+          schema:
+            $ref: '#/components/schemas/QueryRange'
+          description: Time range for data aggregation
+        - name: month
+          in: query
+          schema:
+            type: string
+            pattern: '^(0[1-9]|1[012])$'
+          description: Specific month filter (01-12)
+        - name: year
+          in: query
+          schema:
+            type: string
+          description: Specific year filter
+        - name: partnerBankId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by partner bank
+      responses:
+        '200':
+          description: Analytics data retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AnalyticsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /transactions/{transactionRef}:
+    get:
+      tags:
+        - Transactions
+      summary: Check Transaction Status
+      description: Check the status of a specific transaction
+      security:
+        - BearerAuth: []
+        - SecretKeyAuth: []
+      parameters:
+        - name: transactionRef
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Transaction reference
+      responses:
+        '200':
+          description: Transaction status retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Transaction'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /transactions/{transactionRef}/re-query:
+    get:
+      tags:
+        - Transactions
+      summary: Re-query Transaction Status
+      description: Re-query transaction status from the processor
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: transactionRef
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Transaction reference
+      responses:
+        '200':
+          description: Transaction re-queried successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /transactions/{transactionRef}/reverse:
+    post:
+      tags:
+        - Transactions
+      summary: Reverse Transaction
+      description: Reverse a completed transaction
+      security:
+        - BearerAuth: []
+        - SecretKeyAuth: []
+      parameters:
+        - name: transactionRef
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Transaction reference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyOtpDto'
+      responses:
+        '200':
+          description: Transaction reversal initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /transactions/cashout:
+    post:
+      tags:
+        - Transactions
+      summary: Process Cashout
+      description: Process mobile money cashout to multiple recipients
+      security:
+        - BearerAuth: []
+        - SecretKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCashoutDto'
+      responses:
+        '200':
+          description: Cashout initiated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /transactions/transfer/internal:
+    post:
+      tags:
+        - Transactions
+      summary: Internal Transfer (BluPay to BluPay)
+      description: Transfer funds between BluPay merchants
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Bp2BpTransferDto'
+      responses:
+        '200':
+          description: Internal transfer initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /transactions/wallet/fund:
+    post:
+      tags:
+        - Transactions
+      summary: Fund Wallet
+      description: Fund merchant wallet from daily transactions
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FundWalletDto'
+      responses:
+        '200':
+          description: Wallet funded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /transactions/wallet/balance:
+    get:
+      tags:
+        - Transactions
+      summary: Get Wallet Balance
+      description: Get current merchant wallet balance
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Wallet balance retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WalletBalance'
+
+  /transactions/partners/{partnerBankId}:
+    get:
+      tags:
+        - Transactions
+      summary: Get Transactions by Partner Bank
+      description: Get transactions filtered by partner bank
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: partnerBankId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Partner bank UUID
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+      responses:
+        '200':
+          description: Partner bank transactions retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          transactions:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Transaction'
+
+  /transactions/webhook/mtn:
+    post:
+      tags:
+        - Webhooks
+      summary: MTN Webhook
+      description: Receives transaction status updates from MTN
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MtnWebhookResponse'
+      responses:
+        '200':
+          description: Webhook processed successfully
+
+  /transactions/webhook/orange:
+    post:
+      tags:
+        - Webhooks
+      summary: Orange Webhook
+      description: Receives transaction status updates from Orange
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed successfully
+
+  # Merchant Endpoints
+  /merchants:
+    post:
+      tags:
+        - Merchants
+      summary: Create Merchant
+      description: Create a new merchant with all associated details
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMerchantDto'
+      responses:
+        '201':
+          description: Merchant created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Merchant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    get:
+      tags:
+        - Merchants
+      summary: Get All Merchants
+      description: Get all merchants with filtering and pagination
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+        - name: merchantName
+          in: query
+          schema:
+            type: string
+          description: Filter by merchant name
+      responses:
+        '200':
+          description: Merchants retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          merchants:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Merchant'
+                          meta:
+                            $ref: '#/components/schemas/PaginationMeta'
+
+  /merchants/create-submerchant:
+    post:
+      tags:
+        - Merchants
+      summary: Create Sub-Merchant
+      description: Create a sub-merchant under a parent merchant
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubMerchantDto'
+      responses:
+        '201':
+          description: Sub-merchant created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SubMerchant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /merchants/web/{slug}:
+    get:
+      tags:
+        - Merchants
+      summary: Get Merchant by Slug (Public)
+      description: Get merchant information by slug for web display
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Merchant name slug
+      responses:
+        '200':
+          description: Merchant retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Merchant'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /merchants/categories:
+    get:
+      tags:
+        - Merchants
+      summary: Get Merchant Categories
+      description: Get list of available merchant categories
+      security: []
+      responses:
+        '200':
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MerchantCategory'
+
+  /merchants/{id}:
+    get:
+      tags:
+        - Merchants
+      summary: Get Specific Merchant
+      description: Get detailed information about a specific merchant
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Merchant UUID
+      responses:
+        '200':
+          description: Merchant retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Merchant'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Merchants
+      summary: Update Merchant
+      description: Update merchant information
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Merchant UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMerchantDto'
+      responses:
+        '200':
+          description: Merchant updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      tags:
+        - Merchants
+      summary: Delete Merchant
+      description: Delete a merchant
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Merchant UUID
+      responses:
+        '200':
+          description: Merchant deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /merchants/{id}/sub-merchants:
+    get:
+      tags:
+        - Merchants
+      summary: Get Sub-Merchants
+      description: Get all sub-merchants for a parent merchant
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Parent merchant UUID
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Sub-merchants retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          subMerchants:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/SubMerchant'
+
+  /merchants/apikey/issue:
+    get:
+      tags:
+        - Merchants
+      summary: Issue API Key
+      description: Issue a new API key for the merchant
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: API key issued successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ApiKeyResponse'
+
+  /merchants/apikey/re-issue:
+    patch:
+      tags:
+        - Merchants
+      summary: Re-issue API Key
+      description: Re-issue API key for the merchant
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: API key re-issued successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /merchants/webhook/register:
+    patch:
+      tags:
+        - Merchants
+      summary: Register Webhook
+      description: Register webhook URL for transaction notifications
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWebhookDto'
+      responses:
+        '200':
+          description: Webhook registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # User Endpoints
+  /users/create:
+    post:
+      tags:
+        - Users
+      summary: Create User
+      description: Create a new user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserDto'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Get All Users
+      description: Get all users with filtering and pagination
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          users:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/User'
+
+  # Bank Endpoints
+  /banks:
+    post:
+      tags:
+        - Banks
+      summary: Create Bank
+      description: Create a new bank
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBankDto'
+      responses:
+        '201':
+          description: Bank created successfully
+
+    get:
+      tags:
+        - Banks
+      summary: Get All Banks
+      description: Get all banks
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Banks retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Bank'
+
+  /banks/partners:
+    post:
+      tags:
+        - Banks
+      summary: Create Partner Bank
+      description: Create a partner bank with logo upload
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreatePartnerBankDto'
+      responses:
+        '201':
+          description: Partner bank created successfully
+
+    get:
+      tags:
+        - Banks
+      summary: Get All Partner Banks
+      description: Get all partner banks
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Partner banks retrieved successfully
+
+  /banks/partners/{id}:
+    get:
+      tags:
+        - Banks
+      summary: Get Specific Partner Bank
+      description: Get detailed information about a specific partner bank
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Partner bank UUID
+      responses:
+        '200':
+          description: Partner bank retrieved successfully
+
+  /banks/{id}:
+    get:
+      tags:
+        - Banks
+      summary: Get Specific Bank
+      description: Get detailed information about a specific bank
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Bank ID
+      responses:
+        '200':
+          description: Bank retrieved successfully
+
+    patch:
+      tags:
+        - Banks
+      summary: Update Bank
+      description: Update bank information
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Bank ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBankDto'
+      responses:
+        '200':
+          description: Bank updated successfully
+
+    delete:
+      tags:
+        - Banks
+      summary: Delete Bank
+      description: Delete a bank
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Bank ID
+      responses:
+        '200':
+          description: Bank deleted successfully
+
+  # Device Endpoints
+  /devices:
+    post:
+      tags:
+        - Devices
+      summary: Create Device
+      description: Create a new device
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeviceDto'
+      responses:
+        '201':
+          description: Device created successfully
+
+    get:
+      tags:
+        - Devices
+      summary: Get All Devices
+      description: Get all devices with optional status filtering
+      security: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/DeviceStatus'
+          description: Filter by device status
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Devices retrieved successfully
+
+  /devices/{deviceId}:
+    get:
+      tags:
+        - Devices
+      summary: Get Device Details
+      description: Get device details for app
+      security: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Device ID
+      responses:
+        '200':
+          description: Device details retrieved successfully
+
+  /devices/{id}/assign:
+    patch:
+      tags:
+        - Devices
+      summary: Assign/Update Device
+      description: Assign device to merchant or update device status
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Device UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeviceDto'
+      responses:
+        '200':
+          description: Device updated successfully
+
+  /devices/{id}:
+    delete:
+      tags:
+        - Devices
+      summary: Remove Device
+      description: Remove device from system
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Device UUID
+      responses:
+        '200':
+          description: Device removed successfully
+
+  # Settlement Endpoints
+  /settlements:
+    post:
+      tags:
+        - Settlements
+      summary: Create Settlement
+      description: Create a new settlement configuration
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSettlementDto'
+      responses:
+        '201':
+          description: Settlement created successfully
+
+    get:
+      tags:
+        - Settlements
+      summary: Get All Settlements
+      description: Get all settlement configurations
+      security: []
+      responses:
+        '200':
+          description: Settlements retrieved successfully
+
+  /settlements/{id}:
+    get:
+      tags:
+        - Settlements
+      summary: Get Specific Settlement
+      description: Get detailed information about a specific settlement
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Settlement UUID
+      responses:
+        '200':
+          description: Settlement retrieved successfully
+
+    patch:
+      tags:
+        - Settlements
+      summary: Update Settlement
+      description: Update settlement configuration
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Settlement UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSettlementDto'
+      responses:
+        '200':
+          description: Settlement updated successfully
+
+    delete:
+      tags:
+        - Settlements
+      summary: Delete Settlement
+      description: Delete settlement configuration
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Settlement UUID
+      responses:
+        '200':
+          description: Settlement deleted successfully
+
+  # Telcos Management Endpoints
+  /telcos-mgt:
+    post:
+      tags:
+        - Telcos Management
+      summary: Create Telco Management Entry
+      description: Create a new telco management entry
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTelcosMgtDto'
+      responses:
+        '201':
+          description: Telco management entry created successfully
+
+    get:
+      tags:
+        - Telcos Management
+      summary: Get All Telco Management Entries
+      description: Get all telco management entries
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Telco management entries retrieved successfully
+
+  /telcos-mgt/{id}:
+    patch:
+      tags:
+        - Telcos Management
+      summary: Update Telco Management Entry
+      description: Update telco management entry
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Telco management UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTelcosMgtDto'
+      responses:
+        '200':
+          description: Telco management entry updated successfully
+
+    delete:
+      tags:
+        - Telcos Management
+      summary: Delete Telco Management Entry
+      description: Delete telco management entry
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Telco management UUID
+      responses:
+        '200':
+          description: Telco management entry deleted successfully
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Bearer token authentication
+    SecretKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: |
+        Secret key authentication using API key. Also requires:
+        - x-merchant-id: Merchant UUID
+        - x-idempotency-key: Unique request identifier
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Page number for pagination
+    PerPage:
+      name: perPage
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+      description: Number of items per page
+    StartDate:
+      name: startDate
+      in: query
+      schema:
+        type: string
+        format: date
+      description: Filter start date (YYYY-MM-DD)
+    EndDate:
+      name: endDate
+      in: query
+      schema:
+        type: string
+        format: date
+      description: Filter end date (YYYY-MM-DD)
+    PartnerBankId:
+      name: partnerBankId
+      in: query
+      schema:
+        type: string
+        format: uuid
+      description: Filter by partner bank UUID
+    MerchantBank:
+      name: merchantBank
+      in: query
+      schema:
+        type: string
+        format: uuid
+      description: Filter by merchant bank UUID
+    TransactionType:
+      name: transactionType
+      in: query
+      schema:
+        $ref: '#/components/schemas/TransactionType'
+      description: Filter by transaction type
+
+  responses:
+    BadRequest:
+      description: Bad Request - Invalid input data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 400
+            message: ["email must be a valid email", "password should not be empty"]
+            error: "Bad Request"
+
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 401
+            message: "Unauthorized"
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 403
+            message: "Insufficient permissions for this resource"
+
+    NotFound:
+      description: Not Found - Resource doesn't exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 404
+            message: "Resource not found"
+
+    TooManyRequests:
+      description: Too Many Requests - Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 429
+            message: "ThrottlerException: Too Many Requests"
+
+  schemas:
+    # Enum Schemas
+    Roles:
+      type: string
+      enum: [merchant, administrator, submerchant, partner-bank]
+
+    TransactionStatus:
+      type: string
+      enum: [pending, failed, successful]
+
+    TransactionType:
+      type: string
+      enum: [money_in, money_out, re-query, reversal]
+
+    TransactionSource:
+      type: string
+      enum: [mobile_money, card]
+
+    Telcos:
+      type: string
+      enum: [mtn, airtel, tigo, telecel, orange, internal-transfer]
+
+    Surcharge:
+      type: string
+      enum: [customer, merchant, customer_and_merchant, parent]
+
+    QueryRange:
+      type: string
+      enum: [daily, weekly, monthly, yearly]
+
+    Frequency:
+      type: string
+      enum: [daily, weekly, monthly]
+
+    BankAccountType:
+      type: string
+      enum: [call_account, current_account, savings, credit, mb_wallet_account, pls_account, tdr_account]
+
+    SettlementAcctType:
+      type: string
+      enum: [parent-bank, sub-merchant-bank]
+
+    MerchantType:
+      type: string
+      enum: [parent, sub-merchant]
+
+    DeviceStatus:
+      type: string
+      enum: [submitted, allocated, blocked, removed, active, inactive, maintenance]
+
+    SmsFor:
+      type: string
+      enum: [cashout, password reset, transaction reversal, bp2bp transfer]
+
+    # Common Schemas
+    ApiResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: "Success"
+        data:
+          type: object
+
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        error:
+          type: string
+
+    PaginationMeta:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+        totalPages:
+          type: integer
+        totalItems:
+          type: integer
+        itemsPerPage:
+          type: integer
+
+    # Authentication DTOs
+    AuthEmailLoginDto:
+      type: object
+      required: [email, password, userType]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "merchant@teststore.com"
+        password:
+          type: string
+          example: "Merchant123!"
+        userType:
+          $ref: '#/components/schemas/Roles'
+        partnerName:
+          type: string
+          nullable: true
+
+    LoginResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            user:
+              $ref: '#/components/schemas/User'
+
+    RequestOtpDto:
+      type: object
+      required: [requestedFor]
+      properties:
+        requestedFor:
+          $ref: '#/components/schemas/SmsFor'
+
+    VerifyOtpDto:
+      allOf:
+        - $ref: '#/components/schemas/RequestOtpDto'
+        - type: object
+          required: [otp]
+          properties:
+            otp:
+              type: string
+              example: "123456"
+
+    InitiatePwdReset:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+
+    CompleteResetPasswordDto:
+      type: object
+      required: [password, token]
+      properties:
+        password:
+          type: string
+          example: "NewPassword123!"
+        token:
+          type: string
+          example: "reset_token_from_email"
+
+    # User Schema
+    User:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+          nullable: true
+        role:
+          $ref: '#/components/schemas/Roles'
+        phoneNumber:
+          type: string
+          nullable: true
+        status:
+          type: string
+        profileImage:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateUserDto:
+      type: object
+      required: [email, firstName, password]
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        password:
+          type: string
+        phoneNumber:
+          type: string
+        role:
+          $ref: '#/components/schemas/Roles'
+        profileImage:
+          type: string
+
+    # Transaction DTOs
+    CustomerDto:
+      type: object
+      required: [mobileNumber, amount]
+      properties:
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        mobileNumber:
+          type: string
+          example: "+233501234567"
+        amount:
+          type: number
+          example: 100.50
+
+    CreateTransactionDto:
+      type: object
+      required: [merchantId, processor, surchargeOn, amount, customer, currency, transactionRef, description]
+      properties:
+        merchantId:
+          type: string
+          format: uuid
+        processor:
+          $ref: '#/components/schemas/Telcos'
+        type:
+          $ref: '#/components/schemas/TransactionSource'
+        surchargeOn:
+          $ref: '#/components/schemas/Surcharge'
+        amount:
+          type: number
+          example: 100.50
+        customer:
+          $ref: '#/components/schemas/CustomerDto'
+        currency:
+          type: string
+          example: "GHS"
+        transactionRef:
+          type: string
+          example: "TXN123456789"
+        description:
+          type: string
+          example: "Payment for goods"
+
+    Transaction:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        merchantId:
+          type: string
+          format: uuid
+        processor:
+          $ref: '#/components/schemas/Telcos'
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        source:
+          $ref: '#/components/schemas/TransactionSource'
+        amount:
+          type: number
+        surchargeOnCustomer:
+          type: number
+        surchargeOnMerchant:
+          type: number
+        surchargeOn:
+          $ref: '#/components/schemas/Surcharge'
+        customer:
+          $ref: '#/components/schemas/CustomerDto'
+        currency:
+          type: string
+        transactionRef:
+          type: string
+        description:
+          type: string
+        processorResponse:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TransactionResponse:
+      type: object
+      properties:
+        transactionRef:
+          type: string
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        amount:
+          type: number
+        processor:
+          $ref: '#/components/schemas/Telcos'
+
+    CustomerDto_Cashout:
+      type: object
+      required: [amount, mobileNumber, description, processor]
+      properties:
+        amount:
+          type: number
+        name:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        mobileNumber:
+          type: string
+        description:
+          type: string
+        processor:
+          $ref: '#/components/schemas/Telcos'
+
+    CreateCashoutDto:
+      type: object
+      required: [merchantId, customers, currency, transactionRef]
+      properties:
+        merchantId:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/TransactionSource'
+          default: mobile_money
+        surchargeOn:
+          $ref: '#/components/schemas/Surcharge'
+          default: merchant
+        customers:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerDto_Cashout'
+        currency:
+          type: string
+        transactionRef:
+          type: string
+
+    Bp2BpTransferDto:
+      allOf:
+        - $ref: '#/components/schemas/VerifyOtpDto'
+        - type: object
+          required: [amount, merchantId]
+          properties:
+            amount:
+              type: number
+              minimum: 0.01
+            merchantId:
+              type: string
+              format: uuid
+
+    FundWalletDto:
+      allOf:
+        - $ref: '#/components/schemas/VerifyOtpDto'
+        - type: object
+          required: [amount]
+          properties:
+            amount:
+              type: number
+              minimum: 0.01
+
+    WalletBalance:
+      type: object
+      properties:
+        balance:
+          type: number
+        currency:
+          type: string
+        merchantId:
+          type: string
+          format: uuid
+
+    # Analytics DTOs
+    TimeScaleDataHourly:
+      type: object
+      properties:
+        transactionHour:
+          type: string
+        successfulAmount:
+          type: string
+        failedAmount:
+          type: string
+
+    TimeScaleDataWeekly:
+      type: object
+      properties:
+        dayOfWeek:
+          type: string
+        successfulAmount:
+          type: string
+        failedAmount:
+          type: string
+
+    TimeScaleDataMonthly:
+      type: object
+      properties:
+        monthOfYear:
+          type: string
+        successfulAmount:
+          type: string
+        failedAmount:
+          type: string
+
+    AnalyticsResponse:
+      type: object
+      properties:
+        successTotalMoneyInAmount:
+          type: string
+        successTotalMoneyInCount:
+          type: string
+        successTotalMoneyOutAmount:
+          type: string
+        successTotalMoneyOutCount:
+          type: string
+        failedTotalAmount:
+          type: string
+        failedTotalCount:
+          type: string
+        timeScaleData:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/TimeScaleDataHourly'
+              - $ref: '#/components/schemas/TimeScaleDataWeekly'
+              - $ref: '#/components/schemas/TimeScaleDataMonthly'
+
+    # Merchant DTOs
+    MerchantDto:
+      type: object
+      required: [merchantName, notificationEmail, country, orgType, merchantCategory, merchantCode, terminal, merchantKey, merchantToken]
+      properties:
+        merchantName:
+          type: string
+        merchantNameSlug:
+          type: string
+        canProcessCardTransactions:
+          type: boolean
+          default: false
+        canProcessMomoTransactions:
+          type: boolean
+          default: true
+        notificationEmail:
+          type: string
+          format: email
+        country:
+          type: string
+          enum: [GHANA]
+        address:
+          type: string
+        orgType:
+          type: integer
+        merchantCategory:
+          type: integer
+        merchantCode:
+          type: string
+        terminal:
+          type: string
+          format: uuid
+        merchantKey:
+          type: string
+        merchantToken:
+          type: string
+
+    CreateMerchantBankDetailsDto:
+      type: object
+      required: [bankId, branch, accountName, accountNumber, accountType]
+      properties:
+        bankId:
+          type: string
+          format: uuid
+        branch:
+          type: string
+          format: uuid
+        accountName:
+          type: string
+        accountNumber:
+          type: string
+        accountType:
+          $ref: '#/components/schemas/BankAccountType'
+
+    CreateMerchantDto:
+      type: object
+      required: [merchantDetails, settlementDetails, userDetails, bankDetails]
+      properties:
+        merchantType:
+          $ref: '#/components/schemas/MerchantType'
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        merchantDetails:
+          $ref: '#/components/schemas/MerchantDto'
+        settlementDetails:
+          $ref: '#/components/schemas/CreateSettlementDto'
+        userDetails:
+          $ref: '#/components/schemas/CreateUserDto'
+        bankDetails:
+          $ref: '#/components/schemas/CreateMerchantBankDetailsDto'
+
+    Merchant:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        merchantCode:
+          type: string
+        merchantName:
+          type: string
+        merchantNameSlug:
+          type: string
+        merchantCategoryCode:
+          type: string
+        canProcessCardTransactions:
+          type: boolean
+        canProcessMomoTransactions:
+          type: boolean
+        merchantKey:
+          type: string
+        merchantToken:
+          type: string
+        notificationEmail:
+          type: string
+          format: email
+        country:
+          type: string
+        orgType:
+          type: integer
+        address:
+          type: string
+        merchantType:
+          $ref: '#/components/schemas/MerchantType'
+        webhookUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SubMerchantDto:
+      type: object
+      required: [merchantName, location, city, surchargeOn]
+      properties:
+        merchantCode:
+          type: string
+        merchantName:
+          type: string
+        merchantKey:
+          type: string
+        merchantToken:
+          type: string
+        location:
+          type: string
+        city:
+          type: string
+        mobileNumber:
+          type: string
+        smsEnabled:
+          type: boolean
+        surchargeOn:
+          $ref: '#/components/schemas/Surcharge'
+        surchargeOnMerchant:
+          type: number
+          maximum: 1.5
+          minimum: 0
+        surchargeOnCustomer:
+          type: number
+          maximum: 1.5
+          minimum: 0
+
+    BankDetailsDto:
+      type: object
+      required: [bankId, branch, accountName, accountNumber]
+      properties:
+        bankId:
+          type: string
+          format: uuid
+        branch:
+          type: string
+          format: uuid
+        accountName:
+          type: string
+        accountNumber:
+          type: string
+
+    CreateSubMerchantDto:
+      type: object
+      required: [parent, merchantDetails, bankDetails]
+      properties:
+        parent:
+          type: string
+          format: uuid
+        merchantDetails:
+          $ref: '#/components/schemas/SubMerchantDto'
+        bankDetails:
+          $ref: '#/components/schemas/BankDetailsDto'
+
+    SubMerchant:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        merchantCode:
+          type: string
+        merchantName:
+          type: string
+        merchantKey:
+          type: string
+        merchantToken:
+          type: string
+        surchargeOn:
+          $ref: '#/components/schemas/Surcharge'
+        surchargeFee:
+          type: number
+        surchargeOnCustomer:
+          type: number
+        surchargeOnMerchant:
+          type: number
+        location:
+          type: string
+        city:
+          type: string
+        mobileNumber:
+          type: string
+        smsEnabled:
+          type: boolean
+        merchantType:
+          $ref: '#/components/schemas/MerchantType'
+        parentMerchantId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UpdateMerchantDto:
+      type: object
+      properties:
+        merchantType:
+          $ref: '#/components/schemas/MerchantType'
+        parent:
+          type: string
+          format: uuid
+        merchantDetails:
+          $ref: '#/components/schemas/MerchantDto'
+        settlementDetails:
+          $ref: '#/components/schemas/CreateSettlementDto'
+        userDetails:
+          $ref: '#/components/schemas/CreateUserDto'
+        bankDetails:
+          $ref: '#/components/schemas/CreateMerchantBankDetailsDto'
+
+    UpdateWebhookDto:
+      type: object
+      required: [webhookUrl]
+      properties:
+        webhookUrl:
+          type: string
+          format: uri
+
+    ApiKeyResponse:
+      type: object
+      properties:
+        apiKey:
+          type: string
+        merchantId:
+          type: string
+          format: uuid
+
+    MerchantCategory:
+      type: object
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+
+    # Bank DTOs
+    CreateBankDto:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        tmsId:
+          type: string
+
+    Bank:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+        tmsId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreatePartnerBankDto:
+      type: object
+      required: [name, email, commissionBank, settlementBank, commissionRatio, headers]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        logo:
+          type: string
+          format: binary
+        commissionBank:
+          type: string
+          format: uuid
+        settlementBank:
+          type: string
+          format: uuid
+        commissionRatio:
+          type: number
+        headers:
+          type: array
+          items:
+            type: string
+
+    UpdateBankDto:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        tmsId:
+          type: string
+
+    # Device DTOs
+    CreateDeviceDto:
+      type: object
+      required: [deviceId]
+      properties:
+        deviceId:
+          type: string
+
+    UpdateDeviceDto:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/DeviceStatus'
+        assignedTo:
+          type: string
+          format: uuid
+
+    # Settlement DTOs
+    CreateSettlementDto:
+      type: object
+      required: [frequency, surchargeOn, parentBank, settlementAcct, taxNumber, surchargeSum]
+      properties:
+        frequency:
+          $ref: '#/components/schemas/Frequency'
+        surchargeOn:
+          $ref: '#/components/schemas/Surcharge'
+        surchargeOnMerchant:
+          type: number
+          maximum: 1.5
+          minimum: 0
+        surchargeOnCustomer:
+          type: number
+          maximum: 1.5
+          minimum: 0
+        parentBank:
+          type: string
+          format: uuid
+        settlementAcct:
+          $ref: '#/components/schemas/SettlementAcctType'
+        vatApplicable:
+          type: boolean
+        vatPercentage:
+          type: number
+        taxNumber:
+          type: string
+          minLength: 11
+          maxLength: 15
+        surchargeSum:
+          type: boolean
+
+    UpdateSettlementDto:
+      type: object
+      properties:
+        frequency:
+          $ref: '#/components/schemas/Frequency'
+        surchargeOn:
+          $ref: '#/components/schemas/Surcharge'
+        surchargeOnMerchant:
+          type: number
+          maximum: 1.5
+          minimum: 0
+        surchargeOnCustomer:
+          type: number
+          maximum: 1.5
+          minimum: 0
+        parentBank:
+          type: string
+          format: uuid
+        settlementAcct:
+          $ref: '#/components/schemas/SettlementAcctType'
+        vatApplicable:
+          type: boolean
+        vatPercentage:
+          type: number
+        taxNumber:
+          type: string
+          minLength: 11
+          maxLength: 15
+        surchargeSum:
+          type: boolean
+
+    # Telcos Management DTOs
+    CreateTelcosMgtDto:
+      type: object
+
+    UpdateTelcosMgtDto:
+      type: object
+
+    # Webhook DTOs
+    ReceiverInfo:
+      type: object
+      properties:
+        fromFri:
+          type: string
+        communicationchannel:
+          type: string
+        referenceid:
+          type: string
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+
+    MtnWebhookResponse:
+      type: object
+      properties:
+        receiverInfo:
+          $ref: '#/components/schemas/ReceiverInfo'
+        transactionid:
+          type: string
+        externaltransactionid:
+          type: string
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Transactions
+    description: Payment processing and transaction management
+  - name: Merchants
+    description: Merchant management and configuration
+  - name: Users
+    description: User management
+  - name: Banks
+    description: Bank and partner bank management
+  - name: Devices
+    description: Device management for POS terminals
+  - name: Settlements
+    description: Settlement configuration management
+  - name: Telcos Management
+    description: Telco provider management
+  - name: Webhooks
+    description: Webhook endpoints for external integrations
