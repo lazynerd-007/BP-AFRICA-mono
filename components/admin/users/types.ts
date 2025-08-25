@@ -1,7 +1,9 @@
 export interface User {
   id: number
-  name: string
+  firstName: string
+  lastName: string
   email: string
+  phone: string
   role: string
   status: 'active' | 'inactive'
   lastLogin: Date | null
@@ -20,12 +22,12 @@ export interface UserLog {
 }
 
 export interface UserFormData {
-  name: string
+  firstName: string
+  lastName: string
   email: string
+  phone: string
   role: string
   bdmTag?: string
-  password: string
-  confirmPassword: string
 }
 
 export interface UserFilters {
@@ -61,4 +63,4 @@ export const ACTION_TYPES = [
 ] as const
 
 export type UserRole = typeof ROLES[number]
-export type ActionType = typeof ACTION_TYPES[number] 
+export type ActionType = typeof ACTION_TYPES[number]

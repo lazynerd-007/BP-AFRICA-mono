@@ -2,24 +2,23 @@
 
 import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { IconUsers, IconPlus, IconActivity } from "@tabler/icons-react"
+import { IconUsers, IconPlus } from "@tabler/icons-react"
 import { 
   UserStatsCards, 
   UserList, 
-  UserForm, 
-  UserLogs,
+  UserForm,
   User, 
-  UserLog,
-  UserFilters,
-  LogFilters 
+  UserFilters
 } from "@/components/admin/users"
 
 // Mock data for users
 const mockUsers: User[] = [
   {
     id: 1,
-    name: "Alex Johnson",
+    firstName: "Alex",
+    lastName: "Johnson",
     email: "alex.johnson@example.com",
+    phone: "+233 20 123 4567",
     role: "Super Administrator",
     status: "active",
     lastLogin: new Date("2023-11-10T14:32:18"),
@@ -27,8 +26,10 @@ const mockUsers: User[] = [
   },
   {
     id: 2,
-    name: "Samantha Lee",
+    firstName: "Samantha",
+    lastName: "Lee",
     email: "samantha.lee@example.com",
+    phone: "+233 24 987 6543",
     role: "Administrator",
     status: "active",
     lastLogin: new Date("2023-11-09T11:15:27"),
@@ -36,8 +37,10 @@ const mockUsers: User[] = [
   },
   {
     id: 3,
-    name: "Michael Chen",
+    firstName: "Michael",
+    lastName: "Chen",
     email: "michael.chen@example.com",
+    phone: "+233 26 555 1234",
     role: "Financial Administrator",
     status: "inactive",
     lastLogin: new Date("2023-10-28T09:54:06"),
@@ -45,8 +48,10 @@ const mockUsers: User[] = [
   },
   {
     id: 4,
-    name: "Emily Wilson",
+    firstName: "Emily",
+    lastName: "Wilson",
     email: "emily.wilson@example.com",
+    phone: "+233 27 789 0123",
     role: "Manager",
     status: "active",
     lastLogin: new Date("2023-11-10T10:12:33"),
@@ -54,8 +59,10 @@ const mockUsers: User[] = [
   },
   {
     id: 5,
-    name: "David Rodriguez",
+    firstName: "David",
+    lastName: "Rodriguez",
     email: "david.rodriguez@example.com",
+    phone: "+233 50 456 7890",
     role: "Financial Administrator",
     status: "active",
     lastLogin: new Date("2023-11-07T16:48:22"),
@@ -63,127 +70,16 @@ const mockUsers: User[] = [
   },
 ]
 
-// Mock data for user logs
-const mockUserLogs: UserLog[] = [
-  {
-    id: 1,
-    userId: 1,
-    userName: "Alex Johnson",
-    action: "Login",
-    ip: "192.168.1.105",
-    location: "Accra, Greater Accra, Ghana",
-    device: "Chrome on macOS",
-    timestamp: new Date("2023-11-10T14:32:18"),
-  },
-  {
-    id: 2,
-    userId: 2,
-    userName: "Samantha Lee",
-    action: "Password Change",
-    ip: "172.16.254.1",
-    location: "Kumasi, Ashanti Region, Ghana",
-    device: "Firefox on Windows",
-    timestamp: new Date("2023-11-09T11:15:27"),
-  },
-  {
-    id: 3,
-    userId: 1,
-    userName: "Alex Johnson",
-    action: "Created User",
-    ip: "192.168.1.105",
-    location: "Accra, Greater Accra, Ghana",
-    device: "Chrome on macOS",
-    timestamp: new Date("2023-11-08T16:42:53"),
-  },
-  {
-    id: 4,
-    userId: 4,
-    userName: "Emily Wilson",
-    action: "Login",
-    ip: "192.168.0.1",
-    location: "Takoradi, Western Region, Ghana",
-    device: "Safari on iOS",
-    timestamp: new Date("2023-11-10T10:12:33"),
-  },
-  {
-    id: 5,
-    userId: 3,
-    userName: "Michael Chen",
-    action: "Password Reset Request",
-    ip: "10.0.0.1",
-    location: "Tamale, Northern Region, Ghana",
-    device: "Edge on Windows",
-    timestamp: new Date("2023-10-28T09:54:06"),
-  },
-  {
-    id: 6,
-    userId: 5,
-    userName: "David Rodriguez",
-    action: "Login Failed",
-    ip: "192.168.2.254",
-    location: "Cape Coast, Central Region, Ghana",
-    device: "Chrome on Android",
-    timestamp: new Date("2023-11-07T16:48:22"),
-  },
-  {
-    id: 7,
-    userId: 5,
-    userName: "David Rodriguez",
-    action: "Login",
-    ip: "192.168.2.254",
-    location: "Cape Coast, Central Region, Ghana",
-    device: "Chrome on Android",
-    timestamp: new Date("2023-11-07T16:50:03"),
-  },
-  {
-    id: 8,
-    userId: 2,
-    userName: "Samantha Lee",
-    action: "Updated User Role",
-    ip: "172.16.254.1",
-    location: "Kumasi, Ashanti Region, Ghana",
-    device: "Firefox on Windows",
-    timestamp: new Date("2023-11-06T14:22:19"),
-  },
-  {
-    id: 9,
-    userId: 1,
-    userName: "Alex Johnson",
-    action: "Logout",
-    ip: "192.168.1.105",
-    location: "Accra, Greater Accra, Ghana",
-    device: "Chrome on macOS",
-    timestamp: new Date("2023-11-10T18:15:42"),
-  },
-  {
-    id: 10,
-    userId: 4,
-    userName: "Emily Wilson",
-    action: "Changed Settings",
-    ip: "192.168.0.1",
-    location: "Takoradi, Western Region, Ghana",
-    device: "Safari on iOS",
-    timestamp: new Date("2023-11-09T15:37:11"),
-  },
-]
+
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>(mockUsers)
-  const [userLogs] = useState<UserLog[]>(mockUserLogs)
   
   // User list filters
   const [userFilters, setUserFilters] = useState<UserFilters>({
     searchQuery: "",
     roleFilter: "all",
     statusFilter: "all"
-  })
-  
-  // Log filters
-  const [logFilters, setLogFilters] = useState<LogFilters>({
-    logSearchQuery: "",
-    actionFilter: "all",
-    dateFilter: "all",
-    userFilter: "all"
   })
 
   const handleUserCreated = (newUser: User) => {
@@ -200,11 +96,11 @@ export default function UsersPage() {
       </div>
 
       {/* Stats Cards */}
-      <UserStatsCards users={users} userLogs={userLogs} />
+      <UserStatsCards users={users} />
       
       {/* Main Content Tabs */}
       <Tabs defaultValue="view" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-3 mb-6">
+        <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
           <TabsTrigger value="view">
             <IconUsers className="h-4 w-4 mr-2" />
             View Users
@@ -212,10 +108,6 @@ export default function UsersPage() {
           <TabsTrigger value="create">
             <IconPlus className="h-4 w-4 mr-2" />
             Create User
-          </TabsTrigger>
-          <TabsTrigger value="logs">
-            <IconActivity className="h-4 w-4 mr-2" />
-            User Logs
           </TabsTrigger>
         </TabsList>
         
@@ -230,16 +122,7 @@ export default function UsersPage() {
         <TabsContent value="create">
           <UserForm onUserCreated={handleUserCreated} />
         </TabsContent>
-        
-        <TabsContent value="logs">
-          <UserLogs 
-            users={users}
-            userLogs={userLogs}
-            filters={logFilters}
-            onFiltersChange={setLogFilters}
-          />
-        </TabsContent>
       </Tabs>
     </div>
   )
-} 
+}

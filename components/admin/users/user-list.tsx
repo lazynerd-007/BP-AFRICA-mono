@@ -35,7 +35,8 @@ export function UserList({ users, filters, onFiltersChange }: UserListProps) {
   // Filter users based on search, role, and status
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
     
     const matchesRole = roleFilter === "all" || user.role === roleFilter
@@ -45,12 +46,8 @@ export function UserList({ users, filters, onFiltersChange }: UserListProps) {
   })
 
   // Get user initials for avatar
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map(part => part[0])
-      .join("")
-      .toUpperCase()
+  const getInitials = (firstName: string, lastName: string) => {
+    return (firstName[0] + lastName[0]).toUpperCase()
   }
 
   return (
@@ -128,7 +125,7 @@ export function UserList({ users, filters, onFiltersChange }: UserListProps) {
                 <TableHead className="w-[250px]">User</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Last Login</TableHead>
+                <TableHead>Phone Number</TableHead>
                 <TableHead>Created</TableHead>
               </TableRow>
             </TableHeader>
@@ -139,11 +136,11 @@ export function UserList({ users, filters, onFiltersChange }: UserListProps) {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${getInitials(user.name)}`} alt={user.name} />
-                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${getInitials(user.firstName, user.lastName)}`} alt={`${user.firstName} ${user.lastName}`} />
+                        <AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="font-medium">{user.name}</span>
+                        <span className="font-medium">{user.firstName} {user.lastName}</span>
                         <span className="text-xs text-muted-foreground">{user.email}</span>
                       </div>
                     </div>
@@ -173,7 +170,7 @@ export function UserList({ users, filters, onFiltersChange }: UserListProps) {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {user.lastLogin ? user.lastLogin.toLocaleDateString() : "Never"}
+                    {user.phone}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {user.createdAt.toLocaleDateString()}
@@ -194,4 +191,4 @@ export function UserList({ users, filters, onFiltersChange }: UserListProps) {
       </CardContent>
     </Card>
   )
-} 
+}

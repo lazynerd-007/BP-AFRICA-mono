@@ -167,7 +167,7 @@ export function UserLogs({ users, userLogs, filters, onFiltersChange }: UserLogs
                 <SelectItem value="all">All Users</SelectItem>
                 {users.map(user => (
                   <SelectItem key={user.id} value={user.id.toString()}>
-                    {user.name}
+                    {user.firstName} {user.lastName}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -263,4 +263,4 @@ export function UserLogs({ users, userLogs, filters, onFiltersChange }: UserLogs
       </CardContent>
     </Card>
   )
-} 
+}

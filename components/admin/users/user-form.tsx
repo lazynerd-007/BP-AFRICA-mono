@@ -29,15 +29,12 @@ import { User, ROLES } from "./types"
 
 // User form schema for validation
 const userFormSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
+  firstName: z.string().min(2, "First name must be at least 2 characters"),
+  lastName: z.string().min(2, "Last name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
+  phone: z.string().min(10, "Phone number must be at least 10 digits").regex(/^[+]?[0-9\s\-\(\)]+$/, "Invalid phone number format"),
   role: z.string().min(1, "Role is required"),
   bdmTag: z.string().optional(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
 })
 
 type UserFormValues = z.infer<typeof userFormSchema>
@@ -53,12 +50,12 @@ export function UserForm({ onUserCreated }: UserFormProps) {
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
+      phone: "",
       role: "",
       bdmTag: "",
-      password: "",
-      confirmPassword: "",
     },
   })
   
@@ -70,8 +67,10 @@ export function UserForm({ onUserCreated }: UserFormProps) {
     setTimeout(() => {
       const newUser: User = {
         id: Date.now(), // Use timestamp as temporary ID
-        name: data.name,
+        firstName: data.firstName,
+        lastName: data.lastName,
         email: data.email,
+        phone: data.phone,
         role: data.role,
         status: "active",
         lastLogin: null,
@@ -82,7 +81,7 @@ export function UserForm({ onUserCreated }: UserFormProps) {
       setIsCreatingUser(false)
       form.reset()
       
-      toast.success(`User ${data.name} created successfully`)
+      toast.success(`User ${data.firstName} ${data.lastName} created successfully`)
     }, 1500)
   }
 
@@ -99,12 +98,12 @@ export function UserForm({ onUserCreated }: UserFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
-                name="name"
+                name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>First Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="John Doe" {...field} />
+                      <Input placeholder="John" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -113,12 +112,42 @@ export function UserForm({ onUserCreated }: UserFormProps) {
               
               <FormField
                 control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email Address</FormLabel>
                     <FormControl>
                       <Input placeholder="john.doe@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="+233 20 123 4567" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -176,41 +205,7 @@ export function UserForm({ onUserCreated }: UserFormProps) {
               />
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Must be at least 8 characters
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Re-enter your password to confirm
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+
             
             <div className="flex justify-end">
               <Button 
@@ -236,4 +231,4 @@ export function UserForm({ onUserCreated }: UserFormProps) {
       </CardContent>
     </Card>
   )
-} 
+}
