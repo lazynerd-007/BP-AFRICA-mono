@@ -237,10 +237,12 @@ export class TransactionService {
    * @returns Promise with transaction analytics data
    */
   async getTransactionAnalytics(params?: {
+    range?: string;           // ✅ Add range parameter
+    timeScaleData?: boolean;  // ✅ Add timeScaleData parameter
     startDate?: string;
     endDate?: string;
     partnerBankId?: string;
-    merchantId?: string;
+    parentMerchant?: string;  // ✅ Use parentMerchant instead of merchantId
     subMerchantId?: string;
     status?: TransactionStatus;
     transactionType?: string;

@@ -243,14 +243,19 @@ export function useTransactionStats(filters?: {
     setStats(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      // Build analytics parameters from filters, excluding 'all' values
+      // Build analytics parameters from filters, using correct backend parameter names
       const analyticsParams: {
+        range?: string;
+        timeScaleData?: boolean;
         startDate?: string;
         endDate?: string;
         partnerBankId?: string;
-        merchantId?: string;
+        parentMerchant?: string;  // ✅ Use parentMerchant instead of merchantId
         subMerchantId?: string;
-      } = {};
+      } = {
+        range: 'daily',           // ✅ Add required range parameter
+        timeScaleData: false,     // ✅ Add required timeScaleData parameter
+      };
       
       if (filters) {
         if (filters.startDate) analyticsParams.startDate = filters.startDate;
@@ -259,12 +264,14 @@ export function useTransactionStats(filters?: {
           analyticsParams.partnerBankId = filters.partnerBankId;
         }
         if (filters.merchantId && filters.merchantId !== 'all') {
-          analyticsParams.merchantId = filters.merchantId;
+          analyticsParams.parentMerchant = filters.merchantId;  // ✅ Map merchantId to parentMerchant
         }
         if (filters.subMerchantId && filters.subMerchantId !== 'all') {
           analyticsParams.subMerchantId = filters.subMerchantId;
         }
       }
+      
+      console.log('🔍 Analytics params with correct format:', analyticsParams);
       
       // Fetch analytics data from the analytics endpoint with filters
       const analyticsData = await transactionService.getTransactionAnalytics(analyticsParams);
