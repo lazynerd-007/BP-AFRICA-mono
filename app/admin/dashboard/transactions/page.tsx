@@ -33,7 +33,7 @@ const transformTransactionData = (transactions: Transaction[]): TransformedTrans
 };
 
 // Helper function to safely format numbers for CSV
-const safeFormatNumber = (value: any): string => {
+const safeFormatNumber = (value: string | number | null | undefined): string => {
   if (value === null || value === undefined || value === '') {
     return '0.00';
   }
@@ -48,7 +48,7 @@ const safeFormatNumber = (value: any): string => {
 };
 
 // Helper function to calculate surcharge percentage
-const calculateSurchargePercentage = (fees: any, amount: any): string => {
+const calculateSurchargePercentage = (fees: string | number | null | undefined, amount: string | number | null | undefined): string => {
   const feeNum = typeof fees === 'string' ? parseFloat(fees) : Number(fees);
   const amountNum = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
   
@@ -73,32 +73,31 @@ const formatTransactionDate = (dateString: string): string => {
 };
 
 // Helper function to safely extract merchant data
-const getMerchantInfo = (transaction: any) => {
+const getMerchantInfo = (transaction: Transaction & Record<string, unknown>) => {
   // Try different possible merchant code field structures
   const merchantCode = 
     transaction.merchantId || 
-    transaction.merchantCode ||
-    transaction.merchant?.id ||
-    transaction.merchant?.merchantId ||
-    transaction.merchant?.code ||
-    transaction.merchant?.merchantCode ||
-    transaction.subMerchantId ||
+    (transaction.merchantCode as string) ||
+    (transaction.merchant as Record<string, unknown>)?.id ||
+    (transaction.merchant as Record<string, unknown>)?.merchantId ||
+    (transaction.merchant as Record<string, unknown>)?.code ||
+    (transaction.merchant as Record<string, unknown>)?.merchantCode ||
+    (transaction.subMerchantId as string) ||
     transaction.id ||
-    transaction.ref ||
-    transaction.reference ||
+    (transaction.ref as string) ||
+    (transaction.reference as string) ||
     '';
     
   const merchantName = 
     transaction.merchantName || 
-    transaction.merchant?.merchantName ||
-    transaction.merchant?.name ||
-    transaction.merchant?.title ||
-    (transaction as any).merchant?.merchantName ||
+    (transaction.merchant as Record<string, unknown>)?.merchantName ||
+    (transaction.merchant as Record<string, unknown>)?.name ||
+    (transaction.merchant as Record<string, unknown>)?.title ||
     'Unknown Merchant';
   
   return {
-    code: merchantCode,
-    name: merchantName
+    code: String(merchantCode),
+    name: String(merchantName)
   };
 };
 
@@ -126,7 +125,7 @@ const convertToCSV = (transactions: Transaction[]): string => {
 
   // Convert transactions to CSV rows matching the reference format
   const csvRows = transactions.map(transaction => {
-    const merchantInfo = getMerchantInfo(transaction);
+    const merchantInfo = getMerchantInfo(transaction as Transaction & Record<string, unknown>);
     
     return [
       formatTransactionDate(transaction.createdAt || ''),          // Transaction Date
