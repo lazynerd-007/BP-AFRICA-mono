@@ -74,7 +74,8 @@ const merchantData = {
     airtel: "airtel-ova-001", 
     telecel: "telecel-ova-001"
   },
-  settlementFrequency: "daily",
+  settlementFrequency: "Daily",
+  partnerBank: "First Bank Ghana",
   momoDetails: {
     provider: "mtn",
     number: "024 123 4567",
@@ -330,16 +331,8 @@ export default function MerchantDetailPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Business Name</p>
+                  <p className="text-sm font-medium text-muted-foreground">Merchant Name</p>
                   <p>{merchant.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Business Type</p>
-                  <p>{merchant.businessType}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Registration Number</p>
-                  <p>{merchant.registrationNumber}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Tax ID</p>
@@ -358,35 +351,23 @@ export default function MerchantDetailPage() {
                   <p className="text-sm font-medium text-muted-foreground">Phone</p>
                   <p>{merchant.phone}</p>
                 </div>
-                <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-muted-foreground">Address</p>
-                  <p>{merchant.address}</p>
-                </div>
               </div>
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader>
-              <CardTitle>Bank Details</CardTitle>
+              <CardTitle>Settlement</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Bank Name</p>
-                  <p>{merchant.bankDetails.bankName}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Settlement Freq.</p>
+                  <p>{merchant.settlementFrequency}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Account Number</p>
-                  <p>{merchant.bankDetails.accountNumber}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Account Name</p>
-                  <p>{merchant.bankDetails.accountName}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Swift Code</p>
-                  <p>{merchant.bankDetails.swiftCode}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Partner Bank</p>
+                  <p>{merchant.partnerBank}</p>
                 </div>
               </div>
             </CardContent>
